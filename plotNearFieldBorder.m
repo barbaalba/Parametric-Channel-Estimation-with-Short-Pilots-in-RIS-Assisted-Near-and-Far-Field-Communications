@@ -1,4 +1,4 @@
-function plotNearFieldBorder(x_t,y_t,pltconf,Xmax,Ymax,RIS_coor,d_fraun)
+function plotNearFieldBorder(x_t,y_t,Xmax,Ymax,RIS_coor,d_fraun)
 K = size(x_t,1);
 % circle border
 thet = 0:pi/180:2*pi;
@@ -12,6 +12,6 @@ for k = 1:K
     grid on; xlim([-Xmax,Xmax]); ylim([-Ymax,Ymax]); hold on; 
     plot(RIS_coor(2),RIS_coor(1),'Marker','square','MarkerSize',10,'Color','r');
     plot(y_t,x_t,'-b');
-    plot(xunit,yunit,'--k','LineWidth',3);
+    plot(xunit,yunit,'--k','LineWidth',4);
 end
 end
