@@ -53,7 +53,7 @@ end
 % report the near-field percentage
 disp(['How much percentage in near field: ' num2str(sum(d_t < d_fraun,'all')/RWL/numUE*100)]);
 % generate conventional and farfield channel
-nearChan = nearFieldChanGen(x_t,y_t,z_t,U,lambda);
+realChan = realChanGen(x_t,y_t,z_t,U,lambda);
 farChan = Cph .* UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V_RIS,d_H_RIS);
 % Near Field approximation based on distance and direction of arrivals
 for m = 1:M  
@@ -64,18 +64,18 @@ end
 nearChanapprox = nearFieldApproxChan(d_t,azimuth,elevation,U,lambda);
 %% Real Channel V.s. Near Field V.s. Far Field approximation
 % Maximum gain
-powgain = diag(abs(nearChan'*nearChan).^2);
+powgain = diag(abs(realChan'*realChan).^2);
 SE = log2(1+powgain);
 figure('defaultLineLineWidth',2,'defaultAxesTickLabelInterpreter','latex','defaultAxesFontSize',20);
 plot(SE,'Color','k','LineWidth',4); grid on; xlabel('Time (s)','Interpreter','latex');
 ylabel('Spectral Efficiency (bit/s/Hz)','Interpreter','latex');
 hold on; xlim([0,length(x_t)]);ylim([0,log2(1+max(powgain))+1]);
 % Near Field approximation
-powgain = diag(abs(nearChanapprox'*nearChan).^2);
+powgain = diag(abs(nearChanapprox'*realChan).^2);
 SE = log2(1+powgain);
 plot(SE,'r');
 % Far Field approximation
-powgain = diag(abs(farChan'*nearChan).^2);
+powgain = diag(abs(farChan'*realChan).^2);
 SE = log2(1+powgain);
 plot(SE,'Color','b','LineStyle',':'); grid on; xlabel('Time (s)','Interpreter','latex');
 fig = gcf;
