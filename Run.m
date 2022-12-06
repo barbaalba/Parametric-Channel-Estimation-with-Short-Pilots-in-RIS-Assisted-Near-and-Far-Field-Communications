@@ -12,7 +12,7 @@ z_t = repelem(1.5,numUE,RWL+1); % Z-coordinate of the user(does not change)
 %% Rx/Tx/RIS Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-M_H = 32; M_V = 32; M = M_H * M_V;
+M_H = 64; M_V = 64; M = M_H * M_V;
 d_H_RIS = 1/2;d_V_RIS = 1/2;
 Hsize = M_H*d_H_RIS*lambda;
 Vsize = M_V*d_V_RIS*lambda;
@@ -27,7 +27,7 @@ U = zeros(3,M); % Matrix containing the position of the RIS antennas
 for m = 1:M  
     ym = (-(M_H-1)/2 + i(m))*d_H_RIS*lambda; % dislocation with respect to center in y direction
     zm = (-(M_V-1)/2 + j(m))*d_V_RIS*lambda; % dislocation with respect to center in z direction
-    U(:,m) = [RIS_center(1); RIS_center(2)+ym; RIS_center(3)+zm]; %Position of the m-th element
+    U(:,m) = [RIS_center(1); RIS_center(2)+ym; RIS_center(3)+zm]; % Position of the m-th element
 end
 %% 
 d_BSRIS = 30;
@@ -40,7 +40,7 @@ noisepow = -96; % [dBm]
 txpow = 0; % [dBm]
 
 %% Plot configuration 
-plt = true; % To plot the trajectory
+plt = false; % To plot the trajectory
 pltconf = 'continous'; % 'continous' or 'discrete'
 
 %% Random walk, get the farfield parameters
@@ -55,16 +55,32 @@ disp(['How much percentage in near field: ' num2str(sum(d_t < d_fraun,'all')/RWL
 % generate conventional and farfield channel
 nearChan = nearFieldChanGen(x_t,y_t,z_t,U,lambda);
 farChan = Cph .* UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V_RIS,d_H_RIS);
-% to understand how much we lose if we approximate the near field with far
-% field
-powgain = diag(abs(farChan'*nearChan).^2);
+% Near Field approximation based on distance and direction of arrivals
+for m = 1:M  
+    ym = (-(M_H-1)/2 + i(m))*d_H_RIS*lambda; % dislocation with respect to center in y direction
+    zm = (-(M_V-1)/2 + j(m))*d_V_RIS*lambda; % dislocation with respect to center in z direction
+    U(:,m) = [0; ym; zm]; % Position of the m-th element
+end
+nearChanapprox = nearFieldApproxChan(d_t,azimuth,elevation,U,lambda);
+%% Real Channel V.s. Near Field V.s. Far Field approximation
+% Maximum gain
+powgain = diag(abs(nearChan'*nearChan).^2);
 SE = log2(1+powgain);
 figure('defaultLineLineWidth',2,'defaultAxesTickLabelInterpreter','latex','defaultAxesFontSize',20);
-plot(SE,'Color','b'); grid on; xlabel('Time (s)','Interpreter','latex');
+plot(SE,'Color','k','LineWidth',4); grid on; xlabel('Time (s)','Interpreter','latex');
 ylabel('Spectral Efficiency (bit/s/Hz)','Interpreter','latex');
 hold on; xlim([0,length(x_t)]);ylim([0,log2(1+max(powgain))+1]);
-neart = d_t < d_fraun;
-[~,idx] = find(neart==1);
-plot(idx,SE(neart),'Marker','square','MarkerSize',10,'Color','r','LineStyle','none','LineWidth',2);
+% Near Field approximation
+powgain = diag(abs(nearChanapprox'*nearChan).^2);
+SE = log2(1+powgain);
+plot(SE,'r');
+% Far Field approximation
+powgain = diag(abs(farChan'*nearChan).^2);
+SE = log2(1+powgain);
+plot(SE,'Color','b','LineStyle',':'); grid on; xlabel('Time (s)','Interpreter','latex');
 fig = gcf;
 set(fig,'position',[60 50 1600 800]); % [left bottom width height]
+legend('Max Gain','Near Field Approx','Far Field Approx');
+neart = d_t < d_fraun;
+[~,idx] = find(neart==1);
+%plot(idx,SE(neart),'Marker','square','MarkerSize',10,'Color','r','LineStyle','none','LineWidth',2);
