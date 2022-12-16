@@ -40,7 +40,7 @@ noisepow = -96; % [dBm]
 txpow = 0; % [dBm]
 
 %% Plot configuration 
-plt = false; % To plot the trajectory
+plt = true; % To plot the trajectory
 pltconf = 'continous'; % 'continous' or 'discrete'
 
 %% Random walk, get the farfield parameters
@@ -80,7 +80,8 @@ SE = log2(1+powgain);
 plot(SE,'Color','b','LineStyle',':'); grid on; xlabel('Time (s)','Interpreter','latex');
 fig = gcf;
 set(fig,'position',[60 50 1600 800]); % [left bottom width height]
-legend('Max Gain','Near Field Approx','Far Field Approx');
+legend('Max Gain','Near Field Approx','Far Field Approx','interpreter','latex');
+title([num2str(M_H) '\times' num2str(M_V)]);
 neart = d_t < d_fraun;
 [~,idx] = find(neart==1);
 %plot(idx,SE(neart),'Marker','square','MarkerSize',10,'Color','r','LineStyle','none','LineWidth',2);
