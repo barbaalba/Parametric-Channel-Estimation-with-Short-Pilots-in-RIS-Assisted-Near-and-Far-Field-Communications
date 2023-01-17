@@ -19,11 +19,12 @@ Vsize = M_V*d_V_RIS*lambda;
 disp(['Y-axis size is ' num2str(Hsize) ' (m)']);
 disp(['Z-axis size is ' num2str(Vsize) ' (m)']);
 d_fraun = 2*(Hsize^2+Vsize^2)/lambda/10; %2*diagonal^2/lambda/10
+d_fre = 0.62*sqrt(sqrt(Hsize^2+Vsize^2)^3)/lambda;
 disp(['Fraunhofer distance is ' num2str(d_fraun) ' (m)']);
 i = @(m) mod(m-1,M_H); % Horizontal index
 j = @(m) floor((m-1)/M_H); % Vertical index
-U = zeros(3,M); % Matrix containing the position of the RIS antennas
-% This one is the normal convention to evaluate position of the elements
+U = zeros(3,M); % Matrix containing the position of the RIS antennas 
+% The normal convention to evaluate position of the elements in the room
 for m = 1:M  
     ym = (-(M_H-1)/2 + i(m))*d_H_RIS*lambda; % dislocation with respect to center in y direction
     zm = (-(M_V-1)/2 + j(m))*d_V_RIS*lambda; % dislocation with respect to center in z direction
@@ -40,7 +41,7 @@ noisepow = -96; % [dBm]
 txpow = 0; % [dBm]
 
 %% Plot configuration 
-plt = true; % To plot the trajectory
+plt = false; % To plot the trajectory
 pltconf = 'continous'; % 'continous' or 'discrete'
 
 %% Random walk, get the farfield parameters
@@ -52,16 +53,17 @@ if plt
 end
 % report the near-field percentage
 disp(['How much percentage in near field: ' num2str(sum(d_t < d_fraun,'all')/RWL/numUE*100)]);
-% generate conventional and farfield channel
+% generate the true and farfield channel
 realChan = realChanGen(x_t,y_t,z_t,U,lambda);
 farChan = Cph .* UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V_RIS,d_H_RIS);
 % Near Field approximation based on distance and direction of arrivals
 for m = 1:M  
     ym = (-(M_H-1)/2 + i(m))*d_H_RIS*lambda; % dislocation with respect to center in y direction
     zm = (-(M_V-1)/2 + j(m))*d_V_RIS*lambda; % dislocation with respect to center in z direction
-    U(:,m) = [0; ym; zm]; % Position of the m-th element
+    U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
 nearChanapprox = nearFieldApproxChan(d_t,azimuth,elevation,U,lambda);
+nearChan = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
 %% Real Channel V.s. Near Field V.s. Far Field approximation
 % Maximum gain
 powgain = diag(abs(realChan'*realChan).^2);
@@ -74,6 +76,10 @@ hold on; xlim([0,length(x_t)]);ylim([0,log2(1+max(powgain))+1]);
 powgain = diag(abs(nearChanapprox'*realChan).^2);
 SE = log2(1+powgain);
 plot(SE,'r');
+% Near Field without approximation
+powgain = diag(abs(nearChan'*realChan).^2);
+SE = log2(1+powgain);
+plot(SE,'g');
 % Far Field approximation
 powgain = diag(abs(farChan'*realChan).^2);
 SE = log2(1+powgain);
