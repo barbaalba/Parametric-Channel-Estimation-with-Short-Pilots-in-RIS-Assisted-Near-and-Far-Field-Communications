@@ -11,7 +11,7 @@ for m=1:NumUE
           A = -SP * sign(x_t(m,n));
           x_t(m,n+1) = x_t(m,n) + A;
       end
-      if y_t(m,n) < Ymax && y_t(m,n) > -Ymax
+      if y_t(m,n) < (Ymax-SP) && y_t(m,n) > (-Ymax+SP)
           A = SP*sign(randn); % Generates either +1/-1 depending on the SIGN of RAND.
           y_t(m,n+1) = y_t(m,n) + A;
       else
