@@ -7,7 +7,7 @@ for k = 1:K
     set(fig,'position',[60 50 1600 800]); % [left bottom width height]
     %tiledlayout(2,1);
     subplot(2,2,1);set(gca, 'ydir', 'reverse');xlabel('y');ylabel('x');
-    grid on; xlim([-Xmax,Xmax]); ylim([-Ymax,Ymax]); hold on;
+    grid on; xlim([-Ymax,Ymax]); ylim([-Xmax,Xmax]); hold on;
     plot(RIS_coor(2),RIS_coor(1),'Marker','square','MarkerSize',10,'Color','r');
     subplot(2,2,2);xlabel('Time (s)','Interpreter','latex','FontSize',20);
     ylabel('Azimuth','Interpreter','latex','FontSize',20);grid on;ylim([-90,90]);
