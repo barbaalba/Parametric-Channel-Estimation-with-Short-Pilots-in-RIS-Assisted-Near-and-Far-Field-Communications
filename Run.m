@@ -18,9 +18,11 @@ Hsize = M_H*d_H_RIS*lambda;
 Vsize = M_V*d_V_RIS*lambda;
 disp(['Y-axis size is ' num2str(Hsize) ' (m)']);
 disp(['Z-axis size is ' num2str(Vsize) ' (m)']);
-d_fraun = 2*(Hsize^2+Vsize^2)/lambda/10; %2*diagonal^2/lambda/10
-d_fre = 0.62*sqrt(sqrt(Hsize^2+Vsize^2)^3)/lambda;
+D = sqrt(Hsize^2+Vsize^2);
+d_fraun = 2*(D^2)/lambda/10; %2*diagonal^2/lambda/10
+d_bjo = 2*D;
 disp(['Fraunhofer distance is ' num2str(d_fraun) ' (m)']);
+disp(['Bjornson distance is ' num2str(d_bjo) ' (m)']);
 i = @(m) mod(m-1,M_H); % Horizontal index
 j = @(m) floor((m-1)/M_H); % Vertical index
 U = zeros(3,M); % Matrix containing the position of the RIS antennas 
@@ -56,14 +58,18 @@ disp(['How much percentage in near field: ' num2str(sum(d_t < d_fraun,'all')/RWL
 % generate the true and farfield channel
 realChan = realChanGen(x_t,y_t,z_t,U,lambda);
 farChan = Cph .* UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V_RIS,d_H_RIS);
-% Near Field approximation based on distance and direction of arrivals
+% The relative position with respect to [0;0;0]
 for m = 1:M  
     ym = (-(M_H-1)/2 + i(m))*d_H_RIS*lambda; % dislocation with respect to center in y direction
     zm = (-(M_V-1)/2 + j(m))*d_V_RIS*lambda; % dislocation with respect to center in z direction
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
+
+% Near field approximation based on distance and angles
 nearChanapprox = nearFieldApproxChan(d_t,azimuth,elevation,U,lambda);
+% Near field full expression
 nearChan = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
+
 %% Real Channel V.s. Near Field V.s. Far Field approximation
 % Maximum gain
 powgain = diag(abs(realChan'*realChan).^2);
@@ -86,8 +92,16 @@ SE = log2(1+powgain);
 plot(SE,'Color','b','LineStyle',':'); grid on; xlabel('Time (s)','Interpreter','latex');
 fig = gcf;
 set(fig,'position',[60 50 1600 800]); % [left bottom width height]
-legend('Max Gain','Near Field Approx','Far Field Approx','interpreter','latex');
+legend('Max Gain','Near Field Approx','Near Field','Far Field Approx','interpreter','latex');
 title([num2str(M_H) '\times' num2str(M_V)]);
+% Mark the detected near filed time instances
 neart = d_t < d_fraun;
 [~,idx] = find(neart==1);
 %plot(idx,SE(neart),'Marker','square','MarkerSize',10,'Color','r','LineStyle','none','LineWidth',2);
+%% Channel Estimation 
+
+% get the distance resolution for desinging the codebook
+thre = 0.7; % correlation threshold
+dmin = min([d_bjo,d_t]);
+dmax = max(d_t);
+dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre);
