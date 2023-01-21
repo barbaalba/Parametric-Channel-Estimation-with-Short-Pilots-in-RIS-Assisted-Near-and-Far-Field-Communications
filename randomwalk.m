@@ -1,6 +1,7 @@
-function [x_t,y_t] = randomwalk(NumUE,RandomLength,Xmax,Ymax,SPlim)
+function [x_t,y_t] = randomwalk(NumUE,RandomLength,Xmax,Ymax,xinit,yinit,SPlim)
 x_t = zeros(NumUE,RandomLength);
 y_t = zeros(NumUE,RandomLength);
+x_t(:,1) = xinit; y_t(:,1) = yinit; % Initilaize the location of the user
 for m=1:NumUE
   for n = 1:RandomLength % Looping all values of N into x_t(n).
       SP = unifrnd(SPlim(1),SPlim(2));
