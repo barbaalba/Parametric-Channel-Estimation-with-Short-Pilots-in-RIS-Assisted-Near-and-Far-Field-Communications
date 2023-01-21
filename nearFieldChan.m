@@ -10,7 +10,7 @@ U = -U;
 M = size(U,2);
 T = length(d_t);
 d_m = zeros(M,T);
-for t = 1:T
+parfor t = 1:T
     d_m(:,t) = d_t(t)*sqrt(1+2*sin(azimuth(t))*cos(elevation(t))*U(2,:)/d_t(t)...
         + 2*sin(elevation(t))*U(3,:)/d_t(t) ...
         + (U(2,:).^2+U(3,:).^2) /d_t(t)^2 );
