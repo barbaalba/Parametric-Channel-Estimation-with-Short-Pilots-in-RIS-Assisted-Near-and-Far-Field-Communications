@@ -15,14 +15,14 @@ freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 
 % Set the SNR
-SNRdB_pilot = 0;
+SNRdB_pilot = 30;
 SNR_pilot = db2pow(SNRdB_pilot);
 SNRdB_data = SNRdB_pilot-10;
 SNR_data = db2pow(SNRdB_data);
 Prep = 1;
 
 % RIS parameters
-M_H = 16; M_V = 16; M = M_H * M_V;
+M_H = 20; M_V = 20; M = M_H * M_V;
 d_H_RIS = 1/2;d_V_RIS = 1/2;
 Hsize = M_H*d_H_RIS*lambda;
 Vsize = M_V*d_V_RIS*lambda;
@@ -115,4 +115,9 @@ dmin = min([d_bjo,d_t]);
 dmax = max(d_t);
 dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre);
 
-[capacity,R,~] = MLEfunction3D(G,h,hd,U,dsearch,M_H,M_V,d_H_RIS,d_V_RIS,lambda,SNR_pilot,SNR_data,Prep);
+% Near Field channel estimation
+ [capacity,R,~] = ...
+     MLEfunction3D(G,h,hd,U,dsearch,M_H,M_V,d_H_RIS,d_V_RIS,lambda,SNR_pilot,SNR_data,Prep);
+% Far Field channel estimation
+[~,RFF,~] = ...
+    MLEfunctionDirectupdated(G,h,hd,M_H,M_V,d_H_RIS,d_V_RIS,lambda,SNR_pilot,SNR_data,Prep);
