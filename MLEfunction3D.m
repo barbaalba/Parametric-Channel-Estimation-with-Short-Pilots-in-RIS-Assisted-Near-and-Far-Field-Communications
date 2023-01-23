@@ -93,7 +93,7 @@ while n1<=nbrOfAngleRealizations
                 y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
                 
                 % Estimate the Channel using the developed MLE
-                [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+                [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
              
 
                 %Estimate the RIS configuration that (approximately) maximizes the SNR
