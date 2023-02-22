@@ -5,7 +5,7 @@ Dh = diag(h);
 Dh_angles = diag(h./abs(h)); 
 M = M_H*M_V;
 nbrOfAngleRealizations = size(G,2);
-nbrOfNoiseRealizations = 1;
+nbrOfNoiseRealizations = 5;
 SRes = 2*M_H; % search resolution
 
 %Save the rates achieved at different iterations of the algorithm
@@ -73,7 +73,7 @@ while n1<=nbrOfAngleRealizations
                     idx(n1,n2) = randi(CBL-M_H)+M_H;
                 end
                 utilize(idx(n1,n2)) = true;
-                Plim = M; % number of pilots
+                Plim = M_H; % number of pilots
             end
             g = G(:,n1);
             d = hd(n1);
@@ -133,7 +133,6 @@ while n1<=nbrOfAngleRealizations
                     % To correct the drops due to the pilots during channel
                     % esitimation
                     rate_proposed(n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g + d)^2);
-                    n1 = n1+1;
                 end
             end
         %else
@@ -144,6 +143,7 @@ while n1<=nbrOfAngleRealizations
 %             n1 = n1+1;
         %end
     end
+    n1 = n1+1;
 end
 R = mean(rate_proposed,2);
 end
