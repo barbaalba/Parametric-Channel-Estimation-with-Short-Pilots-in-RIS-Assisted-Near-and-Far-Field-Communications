@@ -11,7 +11,7 @@ function dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre)
 %   distance resolution
 % Output:
 %   - The distances that we use to design codebook 
-d1 = dmin; d2list=d1:D/10:dmax;
+d1 = dmin; d2list=d1:D/M:dmax;
 l = 1;
 dsearch = zeros(1,length(d2list)); % initialize the final distance search
 dsearch(1) = d1;
