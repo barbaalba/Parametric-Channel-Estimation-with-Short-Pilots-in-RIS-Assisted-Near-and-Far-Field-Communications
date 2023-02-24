@@ -3,13 +3,15 @@ function [d_est,var_phas_d_est,var_amp_g_est,var_phas_g_est,g_est,Azidx,Elidx] =
 %   - y: rx signal
 %   - L: number of pilots
 %   - 
-SRes = size(a_range,3);
+thetaSRes = size(a_range,3);
+varphiSRes = size(a_range,2);
+distSRes = size(a_range,4);
 %Compute the ML utility function for all potential AOA/dist triplet
-utility_num = zeros(SRes,SRes,SRes); %numerator of the utility function
-utility_den = zeros(SRes,SRes,SRes); %denominator of the utility function
+utility_num = zeros(varphiSRes,thetaSRes,distSRes); %numerator of the utility function
+utility_den = zeros(varphiSRes,thetaSRes,distSRes); %denominator of the utility function
 % [Az,El,dist]
-for l = 1:SRes
-    for i = 1:SRes
+for l = 1:distSRes
+    for i = 1:thetaSRes
         utility_num(:,i,l) = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* ...
             B*Dh*a_range(:,:,i,l)).^2;
         utility_den(:,i,l) = sum(abs(B*Dh*a_range(:,:,i,l)).^2,1) - (L)^-1 * ...
@@ -22,7 +24,7 @@ utilityfunction = utility_num ./ utility_den; %[Az,El,dist]
 
 %Extract the angle estimate
 [~,maxind] = max(utilityfunction,[],'all');
-[Azidx,Elidx,didx] = ind2sub([SRes,SRes,SRes],maxind);
+[Azidx,Elidx,didx] = ind2sub([varphiSRes,thetaSRes,distSRes],maxind);
 a = a_range(:,Azidx,Elidx,didx);
 
 %Estimate g
