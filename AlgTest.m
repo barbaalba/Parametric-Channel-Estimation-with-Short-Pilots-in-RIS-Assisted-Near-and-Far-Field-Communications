@@ -5,7 +5,7 @@ clc;clear;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 %UPA Element configuration
-M_H = 20; M_V = 20; M = M_H*M_V;
+M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
 Hsize = M_H*d_H*lambda;
 Vsize = M_V*d_V*lambda;
@@ -29,7 +29,11 @@ for m = 1:M
 end
 
 %% Channel Estimation Parameters
-SRes = M; % search resolution
+% search resolution (It is very important)
+varphiSRes = 2*M_H;
+thetaSRes = 2*M_V;
+distSRes = 4*M_H; % Distance resolution is very important to avoid convergence
+Plim = M_H; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = 10;
@@ -53,7 +57,7 @@ nbrOfNoiseRealizations = 5;
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
-rate_proposed = zeros(M-1,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 rate_LS = zeros(M-1,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 %% Iniitilize channel estimation 
 % get the distance resolution for desinging the codebook
@@ -63,7 +67,7 @@ dmax = 5*d_fraun;
 dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre);
 
 %Create a uniform grid of beams (like a DFT matrix) to be used at RIS
-ElAngles = asin(-1:2/M_V*length(dsearch):1);
+ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
 AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
 CBL = length(ElAngles)*length(AzAngles)*length(dsearch); % Code book length
 beamPar = zeros(CBL,3); % Elevation-Azimuth pair
@@ -85,17 +89,17 @@ end
 
 % Define a fine grid of angle directions and distance to be used in
 % estimator
-varphi_range = linspace(-pi/2,pi/2,SRes);
-theta_range = linspace(-pi/2,pi/2,SRes);
-dist_range = linspace(d_bjo,d_fraun,SRes/M_V);
-a_range = zeros(M,SRes,SRes,SRes/M_V); % [M,Azimuth,Elevation,distance]
+varphi_range = linspace(-pi/2,pi/2,varphiSRes);
+theta_range = linspace(-pi/2,pi/2,thetaSRes);
+dist_range = linspace(d_bjo,d_fraun,distSRes);
+a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
 % obtain the array response vectors for all azimuth-elevation-distance
 % triplet
 for l =1:length(dist_range) % for each distance
-    d_t = repelem(dist_range(l),1,SRes);
+    d_t = repelem(dist_range(l),1,varphiSRes);
     parfor i = 1:length(theta_range) % for each elevation
         a_range(:,:,i,l) = ...
-            nearFieldChan(d_t,varphi_range,repelem(theta_range(i),1,SRes),U,lambda);
+            nearFieldChan(d_t,varphi_range,repelem(theta_range(i),1,varphiSRes),U,lambda);
     end
 end
 
@@ -121,7 +125,7 @@ for n1 = 1:nbrOfAngleRealizations
         utilize = false(CBL,1);
         utilize(round(CBL/3)) = true;
         utilize(round(2*CBL/3)) = true;
-        Plim = 10; % number of pilots
+        
 
         RISconfigs = Dh_angles*beamresponses(:,utilize);
         B = RISconfigs';
@@ -175,4 +179,8 @@ rate = mean(mean(rate_proposed,3),2);
 plot(2:Plim,repelem(mean(capacity),1,Plim-1));
 hold on;
 plot(2:Plim,rate(1:Plim-1));
-
+xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
+ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
+fig = gcf;
+fig.Children.FontSize = 20;
+fig.Children.TickLabelInterpreter = 'latex';
