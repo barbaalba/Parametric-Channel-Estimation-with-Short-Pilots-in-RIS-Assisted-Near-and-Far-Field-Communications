@@ -4,6 +4,7 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
+NFConf = false; % True or false to specify which case to simulate
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
@@ -52,7 +53,7 @@ Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
 nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 5;
+nbrOfNoiseRealizations = 1;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -107,7 +108,11 @@ for n1 = 1:nbrOfAngleRealizations
     disp(n1);
     
     % generate the near-field channel 
-    d_t = unifrnd(d_bjo,d_fraun,1);
+    if NFConf
+        d_t = unifrnd(d_bjo,d_fraun,1);
+    else
+        d_t = unifrnd(d_fraun,10*d_fraun);
+    end
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,pi/3,1);
     g = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
