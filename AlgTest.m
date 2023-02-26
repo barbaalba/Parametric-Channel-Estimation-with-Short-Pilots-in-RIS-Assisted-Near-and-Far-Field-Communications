@@ -53,7 +53,7 @@ Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
 nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 1;
+nbrOfNoiseRealizations = 5;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -92,7 +92,8 @@ end
 % estimator
 varphi_range = linspace(-pi/2,pi/2,varphiSRes);
 theta_range = linspace(-pi/2,pi/2,thetaSRes);
-dist_range = linspace(d_bjo,d_fraun,distSRes);
+dist_range = linspace(d_bjo,d_fraun,distSRes-1);
+dist_range(end+1) = max(dsearch(end),d_fraun); % To include far-field search
 a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
 % obtain the array response vectors for all azimuth-elevation-distance
 % triplet
@@ -189,3 +190,5 @@ ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
+legend('Capacity','MLE','Interpreter','latex');
+grid on;
