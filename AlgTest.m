@@ -6,7 +6,7 @@ freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = false; % True or false to specify which case to simulate (Near field or far field)
 FarAppConf = true; % To use far field approximation to estimate the channel
-LSConf = false; % To include the LS estimation of the channel
+LSConf = true; % To include the LS estimation of the channel
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
@@ -54,14 +54,15 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 5;
-nbrOfNoiseRealizations = 1;
+nbrOfAngleRealizations = 10;
+nbrOfNoiseRealizations = 5;
 
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
 rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
-rate_LS = zeros(M-1,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+Far_rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+rate_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 %% Iniitilize channel estimation 
 % get the distance resolution for desinging the codebook
 thre = 0.5; % correlation threshold
@@ -104,6 +105,27 @@ for l =1:length(dist_range) % for each distance
     parfor i = 1:length(theta_range) % for each elevation
         a_range(:,:,i,l) = ...
             nearFieldChan(d_t,varphi_range,repelem(theta_range(i),1,varphiSRes),U,lambda);
+    end
+end
+
+if FarAppConf
+    % Far-Field Dictionary
+    ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
+    AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
+    beamAngles = zeros(M,2); % Elevation-Azimuth pair
+    Farbeamresponses = zeros(M,M);
+    for i = 1:length(ElAngles)
+        beamAngles ((i-1)*length(AzAngles)+1: i*length(AzAngles),:) = [repelem(ElAngles(i),length(AzAngles),1) AzAngles'];
+        Farbeamresponses(:,(i-1)*length(AzAngles)+1: i*length(AzAngles)) = UPA_Evaluate(lambda,M_V,M_H,AzAngles,repelem(ElAngles(i),1,length(AzAngles)),d_V,d_H);
+    end
+    % Define a fine grid of angle directions to analyze when searching for angle of arrival
+    varphi_range = linspace(-pi/2,pi/2,varphiSRes);
+    theta_range = linspace(-pi/2,pi/2,thetaSRes);
+    a_varphi_range = zeros(M,varphiSRes,thetaSRes); % [M,Azimuth,Elevation]
+    % obtain the array response vectors for all azimuth-elevation pairs
+    parfor i = 1:thetaSRes
+    a_varphi_range(:,:,i) = ...
+    UPA_Evaluate(lambda,M_V,M_H,varphi_range,repelem(theta_range(i),1,varphiSRes),d_V,d_H);
     end
 end
 
@@ -205,7 +227,51 @@ for n1 = 1:nbrOfAngleRealizations
         end
         % Far-Field approximation of the channel
         if FarAppConf
-            
+            %Select which two RIS configurations from the grid of beams to start with
+            utilize = false(M,1);
+            utilize(round(M/3)) = true;
+            utilize(round(2*M/3)) = true;
+            %Define the initial transmission setup
+            RISconfigs = Dh_angles*Farbeamresponses(:,utilize);
+            B = RISconfigs';
+
+            %Go through iterations by adding extra RIS configurations in the estimation
+            for itr = 1:Plim-1
+                %Generate the received signal
+                y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
+                
+                % Estimate the Channel using the developed MLE
+                [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_varphi_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+             
+             
+                %Estimate the RIS configuration that (approximately) maximizes the SNR
+                RISconfig = angle(Dh*g_est)-var_phas_d_est;
+                
+                %Compute the corresponding achievable rate
+                Far_rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g + d)^2);
+
+
+                %Find an extra RIS configuration to use for pilot transmission
+                if itr < Plim-1
+                    %Find which angles in the grid-of-beams haven't been used
+                    unusedBeamresponses = Farbeamresponses;
+                    unusedBeamresponses(:,utilize==1) = 0;
+
+                    %Guess what the channel would be with the different beams
+                    guessBeam = Dh*unusedBeamresponses;
+
+                    %Find which of the guessed channels matches best with the
+                    %currently best RIS configuration
+                    closestBeam = abs(exp(-1i*RISconfig).'*guessBeam); 
+                    [~,bestUnusedBeamidx] = max(closestBeam);
+
+                    %Add a pilot transmission using the new RIS configuration
+                    utilize(bestUnusedBeamidx) = true;
+                    RISconfigs = Dh_angles*Farbeamresponses(:,utilize);
+                    B = RISconfigs';
+                end
+            end
+
         end
     end
 
@@ -213,14 +279,16 @@ end
 
 rate = mean(mean(rate_proposed,3),2);
 rate_LS = mean(mean(rate_LS,3),2);
+rate_FF = mean(mean(Far_rate_proposed,3),2);
 plot(2:Plim,repelem(mean(capacity),1,Plim-1),'LineWidth',2);
 hold on;
 plot(2:Plim,rate(1:Plim-1),'LineWidth',2);
 plot(2:Plim,rate_LS(1:Plim-1),'LineWidth',2);
+plot(2:Plim,rate_FF(1:Plim-1),'LineWidth',2);
 xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
 ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
-legend('Capacity','MLE','LS','Interpreter','latex');
+legend('Capacity','MLE','LS','Far-Field','Interpreter','latex');
 grid on;
