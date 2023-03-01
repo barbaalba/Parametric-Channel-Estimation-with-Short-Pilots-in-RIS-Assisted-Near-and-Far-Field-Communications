@@ -4,7 +4,9 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-NFConf = false; % True or false to specify which case to simulate
+NFConf = false; % True or false to specify which case to simulate (Near field or far field)
+FarAppConf = true; % To use far field approximation to estimate the channel
+LSConf = false; % To include the LS estimation of the channel
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
@@ -52,8 +54,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 5;
+nbrOfAngleRealizations = 5;
+nbrOfNoiseRealizations = 1;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -176,19 +178,49 @@ for n1 = 1:nbrOfAngleRealizations
 
             end
         end
+
+        if LSConf
+            %LS estimation
+            DFT = fft(eye(M+1));
+            randomOrdering = randperm(M+1);
+        
+            %Go through iterations by adding extra RIS configurations in the estimation
+            for itr = 1:Plim-1
+
+                B_LS = transpose(DFT(:,randomOrdering(1:itr+1)));
+    
+                v = [d;Dh*g]; % cascaded channel and direct path 
+                y = sqrt(SNR_pilot)*B_LS*v + noise(1:itr+1,1);
+                 
+                %Compute LS estimate without parametrization
+                v_LS = pinv(B_LS)*y/sqrt(SNR_pilot);
+    
+                %Estimate the RIS configuration that (approximately) maximizes the SNR
+                RISconfig =  angle(v_LS(2:end)) - angle(v_LS(1));
+    
+                %Compute the corresponding achievable rate
+                rate_LS(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g+d).^2);
+
+            end
+        end
+        % Far-Field approximation of the channel
+        if FarAppConf
+            
+        end
     end
 
 end
 
 rate = mean(mean(rate_proposed,3),2);
-
-plot(2:Plim,repelem(mean(capacity),1,Plim-1));
+rate_LS = mean(mean(rate_LS,3),2);
+plot(2:Plim,repelem(mean(capacity),1,Plim-1),'LineWidth',2);
 hold on;
-plot(2:Plim,rate(1:Plim-1));
+plot(2:Plim,rate(1:Plim-1),'LineWidth',2);
+plot(2:Plim,rate_LS(1:Plim-1),'LineWidth',2);
 xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
 ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
-legend('Capacity','MLE','Interpreter','latex');
+legend('Capacity','MLE','LS','Interpreter','latex');
 grid on;
