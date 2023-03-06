@@ -13,12 +13,13 @@ d_H = 1/2; d_V = 1/2; %In wavelengths
 Hsize = M_H*d_H*lambda;
 Vsize = M_V*d_V*lambda;
 D = sqrt(Hsize^2+Vsize^2); % Diagonal size of the array
-d_fraun = 2*(D^2)/lambda/10; %2*diagonal^2/lambda/10
-d_bjo = 2*D;
-disp(['Fraunhofer distance is ' num2str(d_fraun) ' (m)']);
+d_fraun = 2*(D^2)/lambda; %2*diagonal^2/lambda
+d_NF = d_fraun/10; % the upper threshold to be in near-field region
+d_bjo = 2*D; % the lower threshold to be in near-field region with constant amplitude
+disp(['The near-field upper threshold is ' num2str(d_NF) ' (m)']);
 disp(['Bjornson distance is ' num2str(d_bjo) ' (m)']);
-if d_fraun < d_bjo
-    disp('The code will not work since bjornson distance is greater than fran dist');
+if d_NF < d_bjo
+    disp('The code will not work since bjornson distance is greater than upper near field distance.');
     return;
 end
 i = @(m) mod(m-1,M_H); % Horizontal index
@@ -54,8 +55,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 5;
+nbrOfAngleRealizations = 25;
+nbrOfNoiseRealizations = 2;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -67,7 +68,7 @@ rate_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 % get the distance resolution for desinging the codebook
 thre = 0.5; % correlation threshold
 dmin = d_bjo;
-dmax = 5*d_fraun;
+dmax = d_fraun;
 dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre);
 
 %Create a uniform grid of beams (like a DFT matrix) to be used at RIS
@@ -95,8 +96,8 @@ end
 % estimator
 varphi_range = linspace(-pi/2,pi/2,varphiSRes);
 theta_range = linspace(-pi/2,pi/2,thetaSRes);
-dist_range = linspace(d_bjo,d_fraun,distSRes-1);
-dist_range(end+1) = max(dsearch(end),d_fraun); % To include far-field search
+dist_range = linspace(d_bjo,d_NF,distSRes-1);
+dist_range(end+1) = max(dsearch(end),d_NF); % To include far-field search
 a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
 % obtain the array response vectors for all azimuth-elevation-distance
 % triplet
@@ -134,7 +135,7 @@ for n1 = 1:nbrOfAngleRealizations
     
     % generate the near-field channel 
     if NFConf
-        d_t = unifrnd(d_bjo,d_fraun,1);
+        d_t = unifrnd(d_bjo,d_NF,1);
     else
         d_t = unifrnd(d_fraun,10*d_fraun);
     end
