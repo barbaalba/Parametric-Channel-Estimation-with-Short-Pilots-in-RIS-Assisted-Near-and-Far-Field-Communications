@@ -6,7 +6,8 @@ freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = false; % True or false to specify which case to simulate (Near field or far field)
 FarAppConf = true; % To use far field approximation to estimate the channel
-LSConf = true; % To include the LS estimation of the channel
+LSConf = false; % To include the LS estimation of the channel
+Newdic = true; % To use DFT matrix as dictionary instead of the one we generated
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
@@ -70,26 +71,30 @@ thre = 0.5; % correlation threshold
 dmin = d_bjo;
 dmax = d_fraun;
 dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre);
-
-%Create a uniform grid of beams (like a DFT matrix) to be used at RIS
-ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
-AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
-CBL = length(ElAngles)*length(AzAngles)*length(dsearch); % Code book length
-beamPar = zeros(CBL,3); % Elevation-Azimuth pair
-beamresponses = zeros(M,CBL); %[Ant,Code book size]
-% The code book parameters. Each row is one beamforming vector [Az,El,dist]
-for l=1:length(dsearch)
-    d_t = repelem(dsearch(l),1,length(AzAngles));
-    for i = 1:length(ElAngles)
-        lowrange = (i-1)*M_H+(l-1)*length(ElAngles)*M_H+1; % indexing variable
-        uprange = i*M_H+(l-1)*length(ElAngles)*M_H; % indexing variable
-        beamPar(lowrange:uprange,:,:) = ...
-            [AzAngles.' , repelem(ElAngles(i),1,length(AzAngles)).' , d_t.'];
+if ~Newdic
+    %Create a uniform grid of beams (like a DFT matrix) to be used at RIS
+    ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
+    AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
+    CBL = length(ElAngles)*length(AzAngles)*length(dsearch); % Code book length
+    beamPar = zeros(CBL,3); % Elevation-Azimuth pair
+    beamresponses = zeros(M,CBL); %[Ant,Code book size]
+    % The code book parameters. Each row is one beamforming vector [Az,El,dist]
+    for l=1:length(dsearch)
+        d_t = repelem(dsearch(l),1,length(AzAngles));
+        for i = 1:length(ElAngles)
+            lowrange = (i-1)*M_H+(l-1)*length(ElAngles)*M_H+1; % indexing variable
+            uprange = i*M_H+(l-1)*length(ElAngles)*M_H; % indexing variable
+            beamPar(lowrange:uprange,:,:) = ...
+                [AzAngles.' , repelem(ElAngles(i),1,length(AzAngles)).' , d_t.'];
+        end
     end
-end
-% Build the dictionary array response
-parfor i = 1:CBL
-    beamresponses(:,i) = nearFieldChan(beamPar(i,3), beamPar(i,1), beamPar(i,2),U,lambda);
+    % Build the dictionary array response
+    parfor i = 1:CBL
+        beamresponses(:,i) = nearFieldChan(beamPar(i,3), beamPar(i,1), beamPar(i,2),U,lambda);
+    end
+else
+    CBL = M;
+    beamresponses = fft(eye(M));
 end
 
 % Define a fine grid of angle directions and distance to be used in
