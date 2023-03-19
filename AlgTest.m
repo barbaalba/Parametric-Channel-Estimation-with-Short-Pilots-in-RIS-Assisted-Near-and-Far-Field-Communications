@@ -7,7 +7,8 @@ lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = false; % True or false to specify which case to simulate (Near field or far field)
 FarAppConf = true; % To use far field approximation to estimate the channel
 LSConf = false; % To include the LS estimation of the channel
-Newdic = true; % To use DFT matrix as dictionary instead of the one we generated
+dic = 'mehdi'; % {3M, mehdi, DFT}
+
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
@@ -66,12 +67,15 @@ rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 Far_rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 rate_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 %% Iniitilize channel estimation 
-% get the distance resolution for desinging the codebook
+% we are collecting the codebooks as an array responses matrix. These
+% vectors are used during channel estimation as RIS configuration
 thre = 0.5; % correlation threshold
 dmin = d_bjo;
 dmax = d_fraun;
+% get the distance resolution for desinging the codebook
 dsearch = HeuristicDistRes(U,dmin,dmax,M,D,lambda,thre);
-if ~Newdic
+% Generate code book
+if strcmp(dic,'3M')
     %Create a uniform grid of beams (like a DFT matrix) to be used at RIS
     ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
     AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
@@ -92,9 +96,12 @@ if ~Newdic
     parfor i = 1:CBL
         beamresponses(:,i) = nearFieldChan(beamPar(i,3), beamPar(i,1), beamPar(i,2),U,lambda);
     end
-else
+elseif strcmp(dic,'DFT')
     CBL = M;
     beamresponses = fft(eye(M));
+elseif strcmp(dic,'mehdi')
+    [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,0,0);
+    beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
 end
 
 % Define a fine grid of angle directions and distance to be used in
@@ -105,7 +112,7 @@ dist_range = linspace(d_bjo,d_NF,distSRes-1);
 dist_range(end+1) = max(dsearch(end),d_NF); % To include far-field search
 a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
 % obtain the array response vectors for all azimuth-elevation-distance
-% triplet
+% triplet using the exact expression
 for l =1:length(dist_range) % for each distance
     d_t = repelem(dist_range(l),1,varphiSRes);
     parfor i = 1:length(theta_range) % for each elevation
@@ -114,23 +121,29 @@ for l =1:length(dist_range) % for each distance
     end
 end
 
+% Far-Field approximation codebook and search array response
 if FarAppConf
-    % Far-Field Dictionary
-    ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
-    AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
-    beamAngles = zeros(M,2); % Elevation-Azimuth pair
-    Farbeamresponses = zeros(M,M);
-    for i = 1:length(ElAngles)
-        beamAngles ((i-1)*length(AzAngles)+1: i*length(AzAngles),:) = [repelem(ElAngles(i),length(AzAngles),1) AzAngles'];
-        Farbeamresponses(:,(i-1)*length(AzAngles)+1: i*length(AzAngles)) = UPA_Evaluate(lambda,M_V,M_H,AzAngles,repelem(ElAngles(i),1,length(AzAngles)),d_V,d_H);
+    if strcmp(dic,'mehdi')
+        Farbeamresponses = beamresponses;
+    else
+        % Far-Field Dictionary
+        ElAngles = asin((-M_V/2:1:M_V/2-1)*2/M_V);
+        AzAngles = asin((-M_H/2:1:M_H/2-1)*2/M_H);
+        beamAngles = zeros(M,2); % Elevation-Azimuth pair
+        Farbeamresponses = zeros(M,M);
+        for i = 1:length(ElAngles)
+            beamAngles ((i-1)*length(AzAngles)+1: i*length(AzAngles),:) = [repelem(ElAngles(i),length(AzAngles),1) AzAngles'];
+            Farbeamresponses(:,(i-1)*length(AzAngles)+1: i*length(AzAngles)) = UPA_Evaluate(lambda,M_V,M_H,AzAngles,repelem(ElAngles(i),1,length(AzAngles)),d_V,d_H);
+        end
     end
+
     % Define a fine grid of angle directions to analyze when searching for angle of arrival
     varphi_range = linspace(-pi/2,pi/2,varphiSRes);
     theta_range = linspace(-pi/2,pi/2,thetaSRes);
-    a_varphi_range = zeros(M,varphiSRes,thetaSRes); % [M,Azimuth,Elevation]
+    a_FarAppx_range = zeros(M,varphiSRes,thetaSRes); % [M,Azimuth,Elevation]
     % obtain the array response vectors for all azimuth-elevation pairs
     parfor i = 1:thetaSRes
-    a_varphi_range(:,:,i) = ...
+    a_FarAppx_range(:,:,i) = ...
     UPA_Evaluate(lambda,M_V,M_H,varphi_range,repelem(theta_range(i),1,varphiSRes),d_V,d_H);
     end
 end
@@ -247,7 +260,7 @@ for n1 = 1:nbrOfAngleRealizations
                 y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
                 
                 % Estimate the Channel using the developed MLE
-                [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_varphi_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+                [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_FarAppx_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
              
              
                 %Estimate the RIS configuration that (approximately) maximizes the SNR
