@@ -1,5 +1,6 @@
 % This code is intended to demonstrate how nearfield behave different than
-% Far-field 
+% Far-field by comparing two distances. To achieve this we increase number
+% of antennas to observe how correlation between two distance varies
 clear; clc; close all;
 %%
 freq = 28e9; % Central frequency
