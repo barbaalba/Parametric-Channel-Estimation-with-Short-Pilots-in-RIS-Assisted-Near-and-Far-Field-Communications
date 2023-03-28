@@ -1,5 +1,6 @@
 function [azimuth,elevation,phase,dist] = ChanParGen(x,y,z,AP_coor,lambda)
-% To generate the parameters for Saleh-Valenzuela channel model
+% To generate the parameters for Saleh-Valenzuela channel model from user
+% position
 % INPUT
 %   x,y,z: are the coordinates of the UE in time
 %   AP_coor : coordinate of the AP/BS/RIS 
