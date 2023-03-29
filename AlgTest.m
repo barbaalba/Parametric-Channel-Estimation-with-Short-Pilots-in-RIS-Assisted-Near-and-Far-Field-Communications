@@ -108,8 +108,10 @@ end
 % estimator
 varphi_range = linspace(-pi/2,pi/2,varphiSRes);
 theta_range = linspace(-pi/2,pi/2,thetaSRes);
-dist_range = linspace(d_bjo,d_NF,distSRes-1);
-dist_range(end+1) = max(dsearch(end),d_NF); % To include far-field search
+dist_range = zeros(1,distSRes);
+dist_range(1:distSRes/2) = linspace(d_bjo,d_NF,distSRes/2);
+dist_range(distSRes/2+1:end) = linspace(d_fraun/9,10*d_fraun,distSRes/2);
+%dist_range(end+1) = max(dsearch(end),d_NF); % To include far-field search
 a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
 % obtain the array response vectors for all azimuth-elevation-distance
 % triplet using the exact expression
