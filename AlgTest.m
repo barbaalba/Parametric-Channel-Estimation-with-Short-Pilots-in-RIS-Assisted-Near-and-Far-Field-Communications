@@ -57,8 +57,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 25;
-nbrOfNoiseRealizations = 2;
+nbrOfAngleRealizations = 15;
+nbrOfNoiseRealizations = 10;
 
 
 %Save the rates achieved at different iterations of the algorithm
