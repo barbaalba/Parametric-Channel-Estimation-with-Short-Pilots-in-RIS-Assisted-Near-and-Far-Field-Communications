@@ -1,3 +1,6 @@
+%% This code is written to check if the codebook generated is orthogonal 
+%% and plot a figure expressing what is the best initialization point and 
+%% illustrate how the estimated dimension changes with initial angle pairs
 clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
