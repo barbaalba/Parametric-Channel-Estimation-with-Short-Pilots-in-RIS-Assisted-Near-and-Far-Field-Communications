@@ -16,20 +16,14 @@ L_H = M_H * d_H;
 
 %% first find the elevation orthogonal to 90 degree
 theta = []; % 0 as the elevation reference
-if d_V == 1/2
-    evar = sign(-elref+eps);
-    for k = evar*(-d_V*M_V:1:d_V*M_V-1)
-        omega = k / L_V + sign(-elref)*sin(elref);
-        val = asin(omega + sin(elref));
-        if isreal(val)
-            theta = [theta val];
-        end
-    end
-else
-    for k = -2*d_V*M_V:1:2*d_V*M_V
-        omega = k / L_V;
-        val = asin(omega + sin(elref));
-        if isreal(val)
+
+for k = -2*d_V*M_V:1:2*d_V*M_V
+    omega = k / L_V;
+    val = asin(omega + sin(elref));
+    if isreal(val)
+        if (val == pi/2 || val == -pi/2) && d_V == 1/2 && ismember(-val,theta)
+        
+        else
             theta = [theta val];
         end
     end
@@ -44,13 +38,16 @@ fn = fieldnames(phi);
 
 %% Build the azimuth for each elevation angle
 for j = 1:length(theta)
-
-    for k = -M_H+1:1:M_H-1
+    for k = -2*M_H*d_H:1:2*d_H*M_H % -2::2
         gama = k/L_H;
         gama = gama/cos(theta(j)) + sin(azref);
         val = asin(gama);
         if isreal(val)
-            phi.(fn{j}) = [phi.(fn{j}) val];
+            if (val == pi/2 || val == -pi/2) && d_H == 1/2 && ismember(-val,phi.(fn{j}))
+
+            else
+                phi.(fn{j}) = [phi.(fn{j}) val];
+            end
         end
     end
 end
