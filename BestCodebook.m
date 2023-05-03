@@ -41,4 +41,7 @@ Y = Th(phi_idx');
 X = Az(varphi_idx');
 hold on;
 plot3(Y,X,Num(linidx),'LineStyle','none','Marker','o','MarkerSize',10,'Color','r',LineWidth=2);
-
+yticks([-pi/2,-pi/4,0,pi/4,pi/2]);
+xticks([-pi/2,-pi/4,0,pi/4,pi/2]);
+xticklabels({'$-\pi/2$','$-\pi/4$','$0$','$\pi/4$','$\pi/2$'});
+yticklabels({'$-\pi/2$','$-\pi/4$','$0$','$\pi/4$','$\pi/2$'});
