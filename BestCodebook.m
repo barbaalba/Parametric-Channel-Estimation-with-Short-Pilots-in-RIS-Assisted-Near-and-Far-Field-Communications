@@ -45,3 +45,11 @@ yticks([-pi/2,-pi/4,0,pi/4,pi/2]);
 xticks([-pi/2,-pi/4,0,pi/4,pi/2]);
 xticklabels({'$-\pi/2$','$-\pi/4$','$0$','$\pi/4$','$\pi/2$'});
 yticklabels({'$-\pi/2$','$-\pi/4$','$0$','$\pi/4$','$\pi/2$'});
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.10 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.9 -0.02];
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+view([110 20]);
