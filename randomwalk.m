@@ -14,14 +14,12 @@ for m=1:NumUE
       Xchange = SP/breakfreq*sin(dir);
       Ychange = SP/breakfreq*cos(dir);
       for l = 1:breakfreq
-          dist = sqrt(x_t(m,breakfreq*(n-1)+(l-1))^2+y_t(m,breakfreq*(n-1)+(l-1))^2);
           Xnew = x_t(m,breakfreq*(n-1)+(l-1))+Xchange;
           Ynew = y_t(m,breakfreq*(n-1)+(l-1))+Ychange;
           newdist = sqrt((Xnew-RIS(1))^2+(Ynew-RIS(2))^2);
           if newdist > d_bjo && Xnew > -Xmax && Xnew < Xmax && Ynew < Ymax && Ynew > -Ymax
               x_t(m,breakfreq*(n-1)+l) = Xnew;
               y_t(m,breakfreq*(n-1)+l) = Ynew;
-              dist = sqrt((Xnew-RIS(2))^2+(Ynew-RIS(1))^2)
           else
               x_t(m,breakfreq*(n-1)+l) = x_t(m,breakfreq*(n-1)+(l-1))-Xchange;
               y_t(m,breakfreq*(n-1)+l) = y_t(m,breakfreq*(n-1)+(l-1))-Ychange;
