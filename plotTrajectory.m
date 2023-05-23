@@ -1,6 +1,11 @@
-function plotTrajectory(x_t,y_t,Az,El,conf,Xmax,Ymax,RIS_coor)
+function plotTrajectory(x_t,y_t,Az,El,conf,Xmax,Ymax,RIS_coor,d_bjo,d_NF)
 K = size(x_t,1);
 T = size(x_t,2);
+thet = 0:pi/180:2*pi;
+xbjo = d_bjo*cos(thet) + RIS_coor(2);
+ybjo = d_bjo*sin(thet) + RIS_coor(1);
+xNF = d_NF*sin(thet) + RIS_coor(2);
+yNF = d_NF*cos(thet) + RIS_coor(1);
 for k = 1:K
     figure('defaultAxesFontSize',20,'DefaultLineLineWidth', 2,'defaultAxesTickLabelInterpreter','latex');
     fig = gcf;
@@ -24,17 +29,21 @@ for k = 1:K
         hold on;
         % The user movement
         plot(y_t(k,t-1:t),x_t(k,t-1:t),'Color','b'); set(gca, 'ydir', 'reverse');xlabel('y');ylabel('x');xlim([-Xmax,Xmax]); ylim([-Ymax,Ymax]);grid on;
+        plot(xbjo,ybjo,'--k','LineWidth',4);
+        plot(xNF,yNF,'--k','LineWidth',4);
         hold off;
     else
         % the user trajectory
         plot(y_t(k,1:t),x_t(k,1:t),'Color','b');
+        plot(xbjo,ybjo,'--k','LineWidth',4);
+        plot(xNF,yNF,'--k','LineWidth',4);
     end
     %nexttile(2);
     subplot(2,2,2);
     plot(rad2deg(Az(k,1:t)),'r','Marker','*','MarkerSize',4);
-    %pause(0.01);
+    pause(0.01);
     subplot(2,2,[3,4]);
     plot(rad2deg(El(k,1:t)),'k','Marker','*','MarkerSize',4);
-    %pause(0.01);
+    pause(0.01);
     end
 end
