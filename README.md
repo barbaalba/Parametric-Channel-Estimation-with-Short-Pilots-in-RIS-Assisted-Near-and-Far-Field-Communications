@@ -9,7 +9,7 @@
 - Tightness.m: To understand far-field and first order approximation of the channel. 
 
 # Improtant Functions
-
+- AlgTest.m: The main code to test the efficiency and effectiveness of the generic channel estimation algorithm. It generates the figures [] and []
 - AzElGraph.m: It plots set of angles that leads to orthogonal beams. Figure [] in the paper. 
 - BestCodeBook.m: It plots 3D figure where we understand what is the best initialization angle to generate the code book. Figure [] in the paper.
 - MLE.m: It is the function that estimate the channel by assuming that it is approximately far-field. 
@@ -21,9 +21,8 @@
 - distanceCorr.m: 
 
 # Random Walk functions
-- plotNearFieldBorder.m: 
-- plotTrajectory.m:
-- randomwalk.m: It generate a random walk scenario in a confined room with given size
-- realChanGen.m:
+- plotTrajectory.m: plot the trajectory of the random walk in the room 
+- randomwalk.m: It generate a random walk scenario in a confined room with given size 
+- realChanGen.m: 
 - Run.m: 
  
