@@ -5,7 +5,7 @@ Ymax = 2; % Room size = [-Ymax, Ymax]
 numUE = 1; % number of users
 RWL = 2;  % Length of the random walk
 Speedlim = [0.1,0.4]; % meter per second movement
-RIS_center = [-Xmax,0,1.6]; % The RIS center point
+RIS_center = [0,0,0]; % The RIS center point
 
 %% Rx/Tx/RIS Initialization
 freq = 28e9; % Central frequency
@@ -37,7 +37,7 @@ disp(['Lower and upper distance are: ' num2str(d_bjo) ' , '  num2str(d_NF) ' (m)
 plt = true; % To plot the trajectory
 pltconf = 'continous'; % 'continous' or 'discrete'
 [x_t,y_t] = randomwalk(numUE,RWL,Xmax,Ymax,Speedlim,d_bjo,RIS_center);
-z_t = repelem(1.5,numUE,size(x_t,2)); % Z-coordinate of the user(does not change)
+z_t = repelem(-0.1,numUE,size(x_t,2)); % Z-coordinate of the user(does not change)
 [azimuth,elevation,Cph,d_t] = ChanParGen(x_t,y_t,z_t,RIS_center,lambda);
 if plt
     plotTrajectory(x_t,y_t,azimuth,elevation,pltconf,Xmax,Ymax,RIS_center,d_bjo,d_NF);
@@ -77,7 +77,7 @@ SNR_pilot = db2pow(SNRdB_pilot);
 
 SNRdB_data = 0;
 SNR_data = db2pow(SNRdB_data);
-Plim = M_H; % number of pilots
+Plim = M_H/2; % number of pilots
 
 % Channel estimation codebook
 [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,1.3264);
