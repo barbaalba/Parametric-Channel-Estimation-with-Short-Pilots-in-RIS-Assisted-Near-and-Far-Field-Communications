@@ -1,9 +1,10 @@
-close all;clear;clc;rng(9);
+close all;clear;clc;%rng(9);
 %% Room Scenario Initialization
 Xmax = 2; % Room size = [-Xmax, Xmax]
 Ymax = 2; % Room size = [-Ymax, Ymax]
 numUE = 1; % number of users
-RWL = 2;  % Length of the random walk
+RWL = 25;  % Length of the random walk in second
+brkfreq = 5; % number of channel instance per second
 Speedlim = [0.1,0.4]; % meter per second movement
 RIS_center = [0,0,0]; % The RIS center point
 
@@ -36,7 +37,7 @@ disp(['Lower and upper distance are: ' num2str(d_bjo) ' , '  num2str(d_NF) ' (m)
 %% Random walk 
 plt = true; % To plot the trajectory
 pltconf = 'continous'; % 'continous' or 'discrete'
-[x_t,y_t] = randomwalk(numUE,RWL,Xmax,Ymax,Speedlim,d_bjo,RIS_center);
+[x_t,y_t] = randomwalk(numUE,RWL,Xmax,Ymax,Speedlim,d_bjo,RIS_center,brkfreq);
 z_t = repelem(-0.1,numUE,size(x_t,2)); % Z-coordinate of the user(does not change)
 [azimuth,elevation,Cph,d_t] = ChanParGen(x_t,y_t,z_t,RIS_center,lambda);
 if plt
@@ -82,7 +83,8 @@ Plim = M_H/2; % number of pilots
 % Channel estimation codebook
 [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,1.3264);
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
-
+% beamresponses = DFTBookBuild(M_H,M_V);
+% CBL = M_H*M_V;
 % grid search resolution (It is very important)
 varphiSRes = 2*M_H;
 thetaSRes = 2*M_V;
@@ -187,3 +189,10 @@ fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
 legend('Capacity','MLE','Interpreter','latex');
 grid on;
+
+ratelive = mean(rate_proposed(Plim-1,:,:),3);
+figure;
+plot(1:size(x_t,2),capacity,'LineWidth',2,'LineStyle','--','Color','k');
+hold on;
+plot(1:size(x_t,2),ratelive,'LineWidth',2);
+
