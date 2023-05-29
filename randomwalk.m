@@ -1,7 +1,7 @@
 function [x_t,y_t] = randomwalk(NumUE,RandomLength,Xmax,Ymax,SPlim,d_bjo,RIS,breakfreq)
 x_t = zeros(NumUE,RandomLength*breakfreq);
 y_t = zeros(NumUE,RandomLength*breakfreq);
-xinit = unifrnd(Xmax/4,Xmax/2,NumUE,1);% Initilaize the location of the user
+xinit = unifrnd(Xmax/8,Xmax/4,NumUE,1);% Initilaize the location of the user
 yinit = unifrnd(-Ymax/2,Ymax/2,NumUE,1);% Initilaize the location of the user
 x_t(:,1:breakfreq) = xinit;
 y_t(:,1:breakfreq) = yinit;
