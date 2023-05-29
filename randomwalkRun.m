@@ -1,12 +1,13 @@
 close all;clear;clc;%rng(9);
 %% Room Scenario Initialization
-Xmax = 2; % Room size = [-Xmax, Xmax]
+Xmax = 4; % Room size = [-Xmax, Xmax]
 Ymax = 2; % Room size = [-Ymax, Ymax]
 numUE = 1; % number of users
-RWL = 25;  % Length of the random walk in second
-brkfreq = 5; % number of channel instance per second
+RWL = 40;  % Length of the random walk in second
+brkfreq = 10; % number of channel instance per second
 Speedlim = [0.1,0.4]; % meter per second movement
 RIS_center = [0,0,0]; % The RIS center point
+Prep = brkfreq;
 
 %% Rx/Tx/RIS Initialization
 freq = 28e9; % Central frequency
@@ -61,7 +62,7 @@ Dh_angles = diag(h./abs(h));
 g_t = realChanGen(x_t,y_t,z_t,U,lambda); % [M,T]
 
 %% Initialize the generic channel estimator 
-nbrOfNoiseRealizations = 1;
+nbrOfNoiseRealizations = 5;
 
 i = @(m) mod(m-1,M_H); % Horizontal index
 j = @(m) floor((m-1)/M_H); % Vertical index
@@ -111,7 +112,7 @@ end
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,size(x_t,2));
 rate_proposed = zeros(Plim,size(x_t,2),nbrOfNoiseRealizations);
-
+RISconfig = zeros(M,nbrOfNoiseRealizations);
 %% Perform channel estimation
 for n1=1:size(x_t,2)
     disp(n1);
@@ -124,54 +125,58 @@ for n1=1:size(x_t,2)
     capacity(n1) = log2(1+SNR_data*(sum(abs(Dh*g)) + abs(d)).^2);
     for n2 = 1:nbrOfNoiseRealizations
         disp(n2);
-        % Estimate the channel using either all pilots or some of them
-        %Select which two RIS configurations from the grid of beams to start with
-        utilize = false(CBL,1);
-        utilize(round(CBL/3)) = true;
-        utilize(round(2*CBL/3)) = true;
-
-        RISconfigs = Dh_angles*beamresponses(:,utilize);
-        B = RISconfigs';
-
-        %Generate the noise
-        noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
-
-        %Go through iterations by adding extra RIS configurations in the estimation
-        for itr = 1:Plim-1
-
-            %Generate the received signal
-            y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
-            
-            % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
-            
-            %Estimate the RIS configuration that (approximately) maximizes the SNR
-            RISconfig = angle(Dh*g_est)-var_phas_d_est;
-
-            %Compute the corresponding achievable rate
-            rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g + d)^2);
-     
-            %Find an extra RIS configuration to use for pilot transmission
-            if itr < Plim 
-
-                %Find which angles in the grid-of-beams haven't been used
-                unusedBeamresponses = beamresponses;
-                unusedBeamresponses(:,utilize==1) = 0;
-                %Guess what the channel would be with the different beams
-                guessBeam = Dh*unusedBeamresponses;
-
-                %Find which of the guessed channels matches best with the
-                %currently best RIS configuration
-                closestBeam = abs(exp(-1i*RISconfig).'*guessBeam); 
-                [~,bestUnusedBeamidx] = max(closestBeam);
-
-
-                %Add a pilot transmission using the new RIS configuration
-                utilize(bestUnusedBeamidx) = true;
-                RISconfigs = Dh_angles*beamresponses(:,utilize);
-                B = RISconfigs';
-
+        if mod(n1,Prep) == 1
+            % Estimate the channel using either all pilots or some of them
+            %Select which two RIS configurations from the grid of beams to start with
+            utilize = false(CBL,1);
+            utilize(round(CBL/3)) = true;
+            utilize(round(2*CBL/3)) = true;
+    
+            RISconfigs = Dh_angles*beamresponses(:,utilize);
+            B = RISconfigs';
+    
+            %Generate the noise
+            noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
+    
+            %Go through iterations by adding extra RIS configurations in the estimation
+            for itr = 1:Plim-1
+    
+                %Generate the received signal
+                y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
+                
+                % Estimate the Channel using the developed MLE
+                [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+                
+                %Estimate the RIS configuration that (approximately) maximizes the SNR
+                RISconfig(:,n2) = angle(Dh*g_est)-var_phas_d_est;
+    
+                %Compute the corresponding achievable rate
+                rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+         
+                %Find an extra RIS configuration to use for pilot transmission
+                if itr < Plim 
+    
+                    %Find which angles in the grid-of-beams haven't been used
+                    unusedBeamresponses = beamresponses;
+                    unusedBeamresponses(:,utilize==1) = 0;
+                    %Guess what the channel would be with the different beams
+                    guessBeam = Dh*unusedBeamresponses;
+    
+                    %Find which of the guessed channels matches best with the
+                    %currently best RIS configuration
+                    closestBeam = abs(exp(-1i*RISconfig(:,n2)).'*guessBeam); 
+                    [~,bestUnusedBeamidx] = max(closestBeam);
+    
+    
+                    %Add a pilot transmission using the new RIS configuration
+                    utilize(bestUnusedBeamidx) = true;
+                    RISconfigs = Dh_angles*beamresponses(:,utilize);
+                    B = RISconfigs';
+    
+                end
             end
+        else
+            rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
         end
 
     end
