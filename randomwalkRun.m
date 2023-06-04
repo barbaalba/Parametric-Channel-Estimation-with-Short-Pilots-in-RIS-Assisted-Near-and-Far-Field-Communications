@@ -200,4 +200,15 @@ figure;
 plot(1:size(x_t,2),capacity,'LineWidth',2,'LineStyle','--','Color','k');
 hold on;
 plot(1:size(x_t,2),ratelive,'LineWidth',2);
-
+plot(1:brkfreq:size(x_t,2),ratelive(1:brkfreq:size(x_t,2)),'LineStyle','none','Marker','o','MarkerSize',10,'LineWidth',2);
+ax = gca;
+ax.TickLabelInterpreter = 'latex';
+xticks = 0:50:RWL*brkfreq;
+xticklabels({'0','5','10','15','20','25','30','35','40'});
+fig = gcf;
+fig.Children.FontSize = 20;
+xlabel('Time [s]','FontSize',20,'Interpreter','latex');
+ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
+legend('Capacity','Live Performace','Re-estimation','FontSize',20,'Interpreter','latex');
+grid on;
+ylim([0,13]);
