@@ -9,9 +9,10 @@ Ant_Center = [0,0,0];
 Hsize = M_H*d_H*lambda;
 Vsize = M_V*d_V*lambda;
 D = sqrt(Hsize^2+Vsize^2);
-d_fraun = 2*(D^2)/lambda/10; %2*diagonal^2/lambda/10
+d_fraun = 2*(D^2)/lambda; %2*diagonal^2/lambda/10
+d_NF = d_fraun/10;
 d_bjo = 2*D;
-disp(['Fraunhofer distance is ' num2str(d_fraun) ' (m)']);
+disp(['Far-Field upperbound distance is ' num2str(d_NF) ' (m)']);
 disp(['Bjornson distance is ' num2str(d_bjo) ' (m)']);
 i = @(m) mod(m-1,M_H); % Horizontal index
 j = @(m) floor((m-1)/M_H); % Vertical index
@@ -22,12 +23,11 @@ for m = 1:M
     zm = (-(M_V-1)/2 + j(m))*d_V*lambda; % dislocation with respect to center in z direction
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
-dist = (d_fraun + d_bjo)/2;
 % define the plane 
-x_t = linspace(0,5*d_fraun,1000);
-z_t = repelem(0,1,length(x_t));
-y_t = linspace(-5*d_fraun,5*d_fraun,length(x_t));
-az = [0,pi/3,-pi/3];
+x_t = linspace(0,d_fraun/4,1000); % cover different distances
+z_t = repelem(0,1,length(x_t)); % Elevation angle of zero
+y_t = linspace(-d_fraun/2,d_fraun/2,length(x_t)); % cover different azimuth
+az = [0,pi/3,-pi/3]; % Which azimuth to consider for beamforming
 pow = zeros(length(y_t),length(x_t),length(az));
 
 for j = 1:length(az)
@@ -43,7 +43,7 @@ for j = 1:length(az)
 end
 % Process the data
 pow = pow2db(pow);
-pow(pow<max(pow,[],'all')-6) = 0;
+pow(pow<max(pow,[],'all')-3) = 0;
 pow = max(pow,[],3);
 % Plot the combined figure
 figure("defaultAxesFontSize",20,"DefaultLineLineWidth", 2,...
