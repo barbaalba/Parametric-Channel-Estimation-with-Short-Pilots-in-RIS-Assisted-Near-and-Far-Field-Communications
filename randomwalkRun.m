@@ -178,27 +178,29 @@ for n1=1:size(x_t,2)
 
             val = abs(exp(-1i*RISconfig(:,n2)).'*Dh_angles*beamresponses);
             [~,idx] = sort(val,'descend');
-            utilize = false(CBL,1);
             Ptrack = M_H/2;
-            utilize(idx(1:Ptrack)) = true;
-
-            RISconfigs = Dh_angles*beamresponses(:,utilize);
-            B = RISconfigs'; %[P,M]
 
             %Generate the noise
             noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
+            for p = 2:Ptrack
+                utilize = false(CBL,1);
+                utilize(idx(1:p)) = true;
 
-            %Generate the received signal
-            y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:Ptrack,1);
-            
-            % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,Ptrack,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
-            
-            %Estimate the RIS configuration that (approximately) maximizes the SNR
-            RISconfig(:,n2) = angle(Dh*g_est)-var_phas_d_est;
+                RISconfigs = Dh_angles*beamresponses(:,utilize);
+                B = RISconfigs'; %[P,M]
 
-            %Compute the corresponding achievable rate
-            rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+                %Generate the received signal
+                y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:p,1);
+            
+                % Estimate the Channel using the developed MLE
+                [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,p,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+            
+                %Estimate the RIS configuration that (approximately) maximizes the SNR
+                RISconfig(:,n2) = angle(Dh*g_est)-var_phas_d_est;
+
+                %Compute the corresponding achievable rate
+                rate_proposed(p-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+            end
         else
             %Compute the corresponding achievable rate
             rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
@@ -228,8 +230,8 @@ plot(1:size(x_t,2),ratelive,'LineWidth',2);
 %plot(1:Prep:size(x_t,2),ratelive(1:Prep:size(x_t,2)),'LineStyle','none','Marker','o','MarkerSize',10,'LineWidth',2);
 ax = gca;
 ax.TickLabelInterpreter = 'latex';
-xticks = 0:50:RWL*brkfreq;
-xticklabels({'0','5','10','15','20','25','30','35','40'});
+xticks = 0:5*brkfreq:RWL*brkfreq;
+xticklabels({'0','5','10','15','20'});
 fig = gcf;
 fig.Children.FontSize = 20;
 xlabel('Time [s]','FontSize',20,'Interpreter','latex');
