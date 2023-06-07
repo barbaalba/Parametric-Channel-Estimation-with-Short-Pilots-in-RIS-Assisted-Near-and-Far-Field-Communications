@@ -3,12 +3,12 @@ close all;clear;clc;%rng(9);
 Xmax = 4; % Room size = [-Xmax, Xmax]
 Ymax = 2; % Room size = [-Ymax, Ymax]
 numUE = 1; % number of users
-RWL = 40;  % Length of the random walk in second
-brkfreq = 10; % number of channel instance per second
+RWL = 20;  % Length of the random walk in second
+brkfreq = 100; % number of channel instance per second
 Speedlim = [0.1,0.4]; % meter per second movement
 RIS_center = [0,0,0]; % The RIS center point
-Prep = brkfreq;
-
+fest = brkfreq; % Estimation frequency
+ftrack = brkfreq/10; % tracking frequency 
 %% Rx/Tx/RIS Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
@@ -36,7 +36,7 @@ d_bjo = 2*D; % the lower threshold to be in near-field region with constant ampl
 disp(['Lower and upper distance are: ' num2str(d_bjo) ' , '  num2str(d_NF) ' (m)']);
 
 %% Random walk 
-plt = true; % To plot the trajectory
+plt = false; % To plot the trajectory
 pltconf = 'continous'; % 'continous' or 'discrete'
 [x_t,y_t] = randomwalk(numUE,RWL,Xmax,Ymax,Speedlim,d_bjo,RIS_center,brkfreq);
 z_t = repelem(-0.1,numUE,size(x_t,2)); % Z-coordinate of the user(does not change)
@@ -81,11 +81,10 @@ SNRdB_data = 0;
 SNR_data = db2pow(SNRdB_data);
 Plim = M_H/2; % number of pilots
 
-% Channel estimation codebook
-[ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,1.3264);
+% Channel estimation codebook (Codebook Section)
+[ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,1.3264); 
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
-% beamresponses = DFTBookBuild(M_H,M_V);
-% CBL = M_H*M_V;
+
 % grid search resolution (It is very important)
 varphiSRes = 2*M_H;
 thetaSRes = 2*M_V;
@@ -125,16 +124,16 @@ for n1=1:size(x_t,2)
     capacity(n1) = log2(1+SNR_data*(sum(abs(Dh*g)) + abs(d)).^2);
     for n2 = 1:nbrOfNoiseRealizations
         disp(n2);
-        if mod(n1,Prep) == 1
-            % Estimate the channel using either all pilots or some of them
-            %Select which two RIS configurations from the grid of beams to start with
+        % Estimate the channel using either all pilots or some of them
+        %Select which two RIS configurations from the grid of beams to start with
+        if mod(n1,fest) == 1
             utilize = false(CBL,1);
             utilize(round(CBL/3)) = true;
             utilize(round(2*CBL/3)) = true;
-    
+
             RISconfigs = Dh_angles*beamresponses(:,utilize);
-            B = RISconfigs';
-    
+            B = RISconfigs'; %[P,M]
+
             %Generate the noise
             noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
     
@@ -175,8 +174,34 @@ for n1=1:size(x_t,2)
     
                 end
             end
+        elseif mod(n1,ftrack) == 1
+
+            val = abs(exp(-1i*RISconfig(:,n2)).'*Dh_angles*beamresponses);
+            [~,idx] = sort(val,'descend');
+            utilize = false(CBL,1);
+            Ptrack = M_H/2;
+            utilize(idx(1:Ptrack)) = true;
+
+            RISconfigs = Dh_angles*beamresponses(:,utilize);
+            B = RISconfigs'; %[P,M]
+
+            %Generate the noise
+            noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
+
+            %Generate the received signal
+            y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:Ptrack,1);
+            
+            % Estimate the Channel using the developed MLE
+            [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,Ptrack,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+            
+            %Estimate the RIS configuration that (approximately) maximizes the SNR
+            RISconfig(:,n2) = angle(Dh*g_est)-var_phas_d_est;
+
+            %Compute the corresponding achievable rate
+            rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
         else
-            rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+            %Compute the corresponding achievable rate
+            rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
         end
 
     end
@@ -200,7 +225,7 @@ figure;
 plot(1:size(x_t,2),capacity,'LineWidth',2,'LineStyle','--','Color','k');
 hold on;
 plot(1:size(x_t,2),ratelive,'LineWidth',2);
-plot(1:brkfreq:size(x_t,2),ratelive(1:brkfreq:size(x_t,2)),'LineStyle','none','Marker','o','MarkerSize',10,'LineWidth',2);
+%plot(1:Prep:size(x_t,2),ratelive(1:Prep:size(x_t,2)),'LineStyle','none','Marker','o','MarkerSize',10,'LineWidth',2);
 ax = gca;
 ax.TickLabelInterpreter = 'latex';
 xticks = 0:50:RWL*brkfreq;
@@ -211,4 +236,4 @@ xlabel('Time [s]','FontSize',20,'Interpreter','latex');
 ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 legend('Capacity','Live Performace','Re-estimation','FontSize',20,'Interpreter','latex');
 grid on;
-ylim([0,13]);
+ylim([0,21]);
