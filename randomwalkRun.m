@@ -7,8 +7,8 @@ RWL = 20;  % Length of the random walk in second
 brkfreq = 100; % number of channel instance per second
 Speedlim = [0.1,0.4]; % meter per second movement
 RIS_center = [0,0,0]; % The RIS center point
-fest = brkfreq; % Estimation frequency
-ftrack = brkfreq/10; % tracking frequency 
+fest = brkfreq/10; % Estimation frequency
+ftrack = brkfreq/100; % tracking frequency 
 %% Rx/Tx/RIS Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
@@ -174,7 +174,7 @@ for n1=1:size(x_t,2)
     
                 end
             end
-        elseif mod(n1,ftrack) == 1
+        else
 
             val = abs(exp(-1i*RISconfig(:,n2)).'*Dh_angles*beamresponses);
             [~,idx] = sort(val,'descend');
@@ -201,9 +201,9 @@ for n1=1:size(x_t,2)
                 %Compute the corresponding achievable rate
                 rate_proposed(p-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
             end
-        else
-            %Compute the corresponding achievable rate
-            rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+%         else
+%             %Compute the corresponding achievable rate
+%             rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
         end
 
     end
