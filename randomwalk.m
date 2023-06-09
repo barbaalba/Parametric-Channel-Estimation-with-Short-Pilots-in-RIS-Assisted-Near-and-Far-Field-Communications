@@ -27,3 +27,8 @@ for m=1:NumUE
   end
 end
 
+x_t = x_t(breakfreq:end);
+y_t = y_t(breakfreq:end);
+
+end
+
