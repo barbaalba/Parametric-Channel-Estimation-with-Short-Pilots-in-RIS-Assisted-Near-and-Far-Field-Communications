@@ -4,7 +4,7 @@ Xmax = 4; % Room size = [-Xmax, Xmax]
 Ymax = 2; % Room size = [-Ymax, Ymax]
 numUE = 1; % number of users
 RWL = 20;  % Length of the random walk in second
-brkfreq = 100; % number of channel instance per second
+brkfreq = 1000; % number of channel instance per second
 Speedlim = [0.1,0.4]; % meter per second movement
 RIS_center = [0,0,0]; % The RIS center point
 fest = brkfreq/10; % Estimation frequency
@@ -62,7 +62,7 @@ Dh_angles = diag(h./abs(h));
 g_t = realChanGen(x_t,y_t,z_t,U,lambda); % [M,T]
 
 %% Initialize the generic channel estimator 
-nbrOfNoiseRealizations = 5;
+nbrOfNoiseRealizations = 1;
 
 i = @(m) mod(m-1,M_H); % Horizontal index
 j = @(m) floor((m-1)/M_H); % Vertical index
@@ -174,15 +174,16 @@ for n1=1:size(x_t,2)
     
                 end
             end
-        else
+        elseif mod(n1,ftrack) == 1
 
             val = abs(exp(-1i*RISconfig(:,n2)).'*Dh_angles*beamresponses);
             [~,idx] = sort(val,'descend');
-            Ptrack = M_H/2;
+            %Ptrack = M_H/2;
+            p = 10;
 
             %Generate the noise
             noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
-            for p = 2:Ptrack
+            %for p = 2:Ptrack
                 utilize = false(CBL,1);
                 utilize(idx(1:p)) = true;
 
@@ -199,11 +200,11 @@ for n1=1:size(x_t,2)
                 RISconfig(:,n2) = angle(Dh*g_est)-var_phas_d_est;
 
                 %Compute the corresponding achievable rate
-                rate_proposed(p-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
-            end
-%         else
-%             %Compute the corresponding achievable rate
-%             rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+                rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
+            %end
+        else
+             %Compute the corresponding achievable rate
+             rate_proposed(Plim-1,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig(:,n2)).'*Dh*g + d)^2);
         end
 
     end
@@ -221,17 +222,28 @@ fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
 legend('Capacity','MLE','Interpreter','latex');
 grid on;
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]); %[left bottom width height]
+
 
 ratelive = mean(rate_proposed(Plim-1,:,:),3);
 figure;
 plot(1:size(x_t,2),capacity,'LineWidth',2,'LineStyle','--','Color','k');
 hold on;
 plot(1:size(x_t,2),ratelive,'LineWidth',2);
+xticks(0:brkfreq:RWL*brkfreq);
+yticks(0:2:21);
+xlim([0 10000]);
+xticklabels({'0','1','2','3','4','5','6','7','8','9','10'});
 %plot(1:Prep:size(x_t,2),ratelive(1:Prep:size(x_t,2)),'LineStyle','none','Marker','o','MarkerSize',10,'LineWidth',2);
 ax = gca;
 ax.TickLabelInterpreter = 'latex';
-xticks = 0:5*brkfreq:RWL*brkfreq;
-xticklabels({'0','5','10','15','20'});
 fig = gcf;
 fig.Children.FontSize = 20;
 xlabel('Time [s]','FontSize',20,'Interpreter','latex');
@@ -239,3 +251,11 @@ ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 legend('Capacity','Live Performace','Re-estimation','FontSize',20,'Interpreter','latex');
 grid on;
 ylim([0,21]);
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]); %[left bottom width height]
