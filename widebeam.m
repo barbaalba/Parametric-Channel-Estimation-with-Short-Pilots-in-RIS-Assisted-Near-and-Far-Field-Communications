@@ -59,7 +59,7 @@ if conf == 1
     xlabel('$x$','Interpreter','Latex');
     ylabel('$y$','Interpreter','Latex');
     zlabel('$z$','Interpreter','Latex');
-    caxis([0 pow2db(M_H*M_V)]); % limit the color map
+    caxis([0 pow2db(M_H_red*M_V_red)]); % limit the color map
     colormap(flipud(hot));
     hBar = colorbar;
     set(hBar, 'TickLabelInterpreter', 'latex');
@@ -104,7 +104,7 @@ if conf == 1
     xlabel('$x$','Interpreter','Latex');
     ylabel('$y$','Interpreter','Latex');
     zlabel('$z$','Interpreter','Latex');
-    caxis([0 pow2db(M_H*M_V)]); % limit the color map
+    caxis([0 pow2db(M_H_red*M_V_red)]); % limit the color map
     colormap(flipud(hot));
     hBar = colorbar;
     set(hBar, 'TickLabelInterpreter', 'latex');
@@ -114,6 +114,9 @@ if conf == 1
     view(122,30);
     hold on;
     xlim([0,1]); % To cut the sphere in half
+    x_circ = cos(varphiAngles);
+    y_circ = sin(varphiAngles);
+    plot3(x_circ,y_circ,zeros(size(x_circ)),'k:','LineWidth',2);
     save('widebeam16.mat','firsttarget','secondtarget');
 else 
     [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,0,0); 
