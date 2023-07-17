@@ -5,9 +5,6 @@ clc;clear;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = false; % True or false to specify which case to simulate (Near field or far field)
-FarAppConf = false; % To use far field approximation to estimate the channel
-LSConf = false; % To include the LS estimation of the channel
-dic = 'mehdi'; % {3M, mehdi, DFT}
 wideBF = true; % To start the algorithm with random choice or wide beams
 
 %UPA Element configuration
@@ -37,13 +34,13 @@ end
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
-varphiSRes = 2*M_H;
-thetaSRes = 2*M_V;
-distSRes = 4*M_H; % Distance resolution is very important to avoid convergence
+varphiSRes = 8*M_H;
+thetaSRes = 8*M_V;
+distSRes = 8*M_H; % Distance resolution is very important to avoid convergence
 Plim = 32; % number of pilots
 
 %Set the SNR
-SNRdB_pilot = 10;
+SNRdB_pilot = 0;
 SNR_pilot = db2pow(SNRdB_pilot);
 
 SNRdB_data = -10;
@@ -59,7 +56,7 @@ Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
 nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 2;
+nbrOfNoiseRealizations = 5;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -80,8 +77,8 @@ beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
 varphi_range = linspace(-pi/2,pi/2,varphiSRes);
 theta_range = linspace(-pi/2,pi/2,thetaSRes);
 dist_range = zeros(1,distSRes);
-dist_range(1:distSRes/2) = linspace(d_bjo,d_NF,distSRes/2);
-dist_range(distSRes/2+1:end) = linspace(d_fraun/9,10*d_fraun,distSRes/2);
+%dist_range(1:distSRes/2) = linspace(d_bjo,d_NF,distSRes/2);
+dist_range(:) = linspace(d_fraun/9,10*d_fraun,distSRes);
 
 % obtain the array response vectors for all azimuth-elevation-distance
 % triplet using the exact expression
@@ -220,31 +217,32 @@ for n1 = 1:nbrOfAngleRealizations
                 end
             end
             SNR_w_total(:,n1,n2) = (abs(sqrt(SNR_pilot)*(B*Dh*g + d)).^2) ./ abs(noise(1:itr+1,1)).^2;
-        end
-        
+        end       
     end
-
 end
 
+%% plots results
 rate = mean(mean(rate_proposed,3),2);
 widerate = mean(mean(rate_wide,3),2);
 plot(2:Plim,repelem(mean(capacity),1,Plim-1),'LineWidth',2);
 hold on;
 plot(2:Plim,widerate(1:Plim-1),'linewidth',2);
 plot(2:Plim,rate(1:Plim-1),'LineWidth',2);
-
 xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
 ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
 legend('Capacity','Widebeam','NarrowBeam','Interpreter','latex');
-grid on;
- 
-% SNR_w_total_new = mean(mean(SNR_w_total,3),2);
-% SNR_total_new = mean(mean(SNR_total,3),2);
-% figure;
-% plot(pow2db(SNR_total_new),'LineWidth',2);
-% hold on;
-% plot(pow2db(SNR_w_total_new),'LineWidth',2);
-% legend('Narrowbeam','Widebeam');
+grid on; 
+
+SNR_w_total_new = mean(mean(SNR_w_total,3),2);
+SNR_total_new = mean(mean(SNR_total,3),2);
+figure;
+plot(pow2db(SNR_total_new),'LineWidth',2);
+hold on;
+plot(pow2db(SNR_w_total_new),'LineWidth',2);
+legend('Narrowbeam','Widebeam');
+
+save('3DWide_Narrow16Data_5.mat','rate_proposed','rate_wide','SNR_total',...
+    'SNR_w_total','capacity','Plim');
