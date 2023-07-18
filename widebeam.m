@@ -3,8 +3,8 @@ freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 
 % RIS parameters
-M_H = 16; M_V = 16; M = M_H*M_V;
-d_H = 1/2;d_V = 1/2;
+M_H = 16; M_V = 64; M = M_H*M_V;
+d_H = 1/4;d_V = 1/4;
 conf  = 1; % 1= widebam, 2= Hedgehog shape beam
 if conf == 1   
     N_s = sqrt(2*M/(pi*d_V*d_H));
@@ -18,7 +18,7 @@ if conf == 1
         N_v = M_V;N_h = N_s/N_v;
     end
     s = M/N_s; % number of sectors
-    [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_H,M_V,d_V,d_H,0,0); 
+    [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(N_v,N_h,d_V,d_H,0,0); 
     
     beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
     firsttarget = zeros(M,1);
