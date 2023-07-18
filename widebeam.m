@@ -6,26 +6,27 @@ lambda = physconst('LightSpeed') / freq; % Wavelength
 M_H = 16; M_V = 16; M = M_H*M_V;
 d_H = 1/2;d_V = 1/2;
 conf  = 1; % 1= widebam, 2= Hedgehog shape beam
-if conf == 1
-    M_H_red = 16; M_V_red = 2; M_red = M_H * M_V; % breaking section    
-    [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V_red,M_H_red,d_V,d_H,0,0); 
-    
-    % Consider below the RIS (Elevation <= 0)
-    elidx = find(ElAngles==0);
-    ElAngles = ElAngles(1:elidx);
-    fl = fieldnames(AzAngles);
-    for i = elidx+1:length(fl)
-           AzAngles = rmfield(AzAngles,fl{i});
+if conf == 1   
+    N_s = sqrt(2*M/(pi*d_V*d_H));
+    N_s = 2^floor(log2(N_s)); % number of elements per sector
+    ax  = 1*(M_H<=M_V);
+    % if horizental axis is smaller
+    if ax 
+        N_h = M_H; N_v = N_s/N_h; % structure of each sector
+    % if vertical axis is smaller
+    else
+        N_v = M_V;N_h = N_s/N_v;
     end
+    s = M/N_s; % number of sectors
+    [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_H,M_V,d_V,d_H,0,0); 
     
-    beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V_red,M_H_red,d_V,d_H);
-    samp = M_V/M_V_red;
-    sampl = M/samp;
-    firsttarget = zeros(M_V*M_H,1);
-    secondtarget = zeros(M_V*M_H,1);
-    for i = 1:samp 
-        firsttarget((i-1)*sampl+1:i*sampl) = beamresponses(:,size(beamresponses,2)-i+1);
-        secondtarget((i-1)*sampl+1:i*sampl) = beamresponses(:,i+1);
+    beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
+    firsttarget = zeros(M,1);
+    secondtarget = zeros(M,1);
+    % per section config association
+    for i = 1:s 
+        firsttarget((i-1)*N_s+1:i*N_s) = beamresponses((i-1)*N_s+1:i*N_s,size(beamresponses,2)-i+1);
+        secondtarget((i-1)*N_s+1:i*N_s) = beamresponses((i-1)*N_s+1:i*N_s,i);
     end
     
     %% Plot 1
@@ -59,7 +60,7 @@ if conf == 1
     xlabel('$x$','Interpreter','Latex');
     ylabel('$y$','Interpreter','Latex');
     zlabel('$z$','Interpreter','Latex');
-    caxis([0 pow2db(M_H_red*M_V_red)]); % limit the color map
+    caxis([0 pow2db(N_s)]); % limit the color map
     colormap(flipud(hot));
     hBar = colorbar;
     set(hBar, 'TickLabelInterpreter', 'latex');
@@ -104,7 +105,7 @@ if conf == 1
     xlabel('$x$','Interpreter','Latex');
     ylabel('$y$','Interpreter','Latex');
     zlabel('$z$','Interpreter','Latex');
-    caxis([0 pow2db(M_H_red*M_V_red)]); % limit the color map
+    caxis([0 pow2db(N_s)]); % limit the color map
     colormap(flipud(hot));
     hBar = colorbar;
     set(hBar, 'TickLabelInterpreter', 'latex');
