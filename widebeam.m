@@ -3,12 +3,11 @@ freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 
 % RIS parameters
-M_H = 16; M_V = 64; M = M_H*M_V;
+M_H = 16; M_V = 16; M = M_H*M_V;
 d_H = 1/4;d_V = 1/4;
 conf  = 1; % 1= widebam, 2= Hedgehog shape beam
 if conf == 1   
-    N_s = sqrt(2*M/(pi*d_V*d_H));
-    N_s = 2^floor(log2(N_s)); % number of elements per sector
+    N_s = 0.5*M_H/d_H;
     ax  = 1*(M_H<=M_V);
     % if horizental axis is smaller
     if ax 
@@ -24,11 +23,24 @@ if conf == 1
     firsttarget = zeros(M,1);
     secondtarget = zeros(M,1);
     % per section config association
-    for i = 1:s 
-        firsttarget((i-1)*N_s+1:i*N_s) = beamresponses((i-1)*N_s+1:i*N_s,size(beamresponses,2)-i+1);
-        secondtarget((i-1)*N_s+1:i*N_s) = beamresponses((i-1)*N_s+1:i*N_s,i);
+    if CBL < s
+        for i = 1:CBL
+            firsttarget((i-1)*N_s+1:i*N_s) = beamresponses((i-1)*N_s+1:i*N_s,i);
+        end
+        for i = CBL+1:s
+            k = unidrnd(CBL);
+            firsttarget((i-1)*N_s+1:i*N_s) = beamresponses((i-1)*N_s+1:i*N_s,k);
+        end
+    else
+        for i = 1:s/2 
+            firsttarget((i-1)*2*N_s+1:i*2*N_s) = beamresponses((i-1)*2*N_s+1:i*2*N_s,i);
+        end
+        for i = s/2+1:s
+            secondtarget((i-s/2-1)*2*N_s+1:(i-s/2)*2*N_s) =  beamresponses((i-s/2-1)*2*N_s+1:(i-s/2)*2*N_s,i);
+        end
+
     end
-    
+    %save('WideSinglebeam16.mat','firsttarget','secondtarget');
     %% Plot 1
     %Prepare to plot colors on a sphere
     N = 540;
@@ -60,7 +72,7 @@ if conf == 1
     xlabel('$x$','Interpreter','Latex');
     ylabel('$y$','Interpreter','Latex');
     zlabel('$z$','Interpreter','Latex');
-    caxis([0 pow2db(N_s)]); % limit the color map
+    caxis([0 pow2db(M)]); % limit the color map
     colormap(flipud(hot));
     hBar = colorbar;
     set(hBar, 'TickLabelInterpreter', 'latex');
@@ -105,7 +117,7 @@ if conf == 1
     xlabel('$x$','Interpreter','Latex');
     ylabel('$y$','Interpreter','Latex');
     zlabel('$z$','Interpreter','Latex');
-    caxis([0 pow2db(N_s)]); % limit the color map
+    caxis([0 pow2db(M)]); % limit the color map
     colormap(flipud(hot));
     hBar = colorbar;
     set(hBar, 'TickLabelInterpreter', 'latex');
@@ -118,7 +130,7 @@ if conf == 1
     x_circ = cos(varphiAngles);
     y_circ = sin(varphiAngles);
     plot3(x_circ,y_circ,zeros(size(x_circ)),'k:','LineWidth',2);
-    save('widebeam16.mat','firsttarget','secondtarget');
+    %save('widebeam16.mat','firsttarget','secondtarget');
 else 
     [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,0,0); 
     % Consider below the RIS (Elevation <= 0)
@@ -235,3 +247,4 @@ else
 
     
 end
+abs(firsttarget'*UPA_Evaluate(lambda,M_V,M_H,-0.675131532937032,0,d_V,d_H))
