@@ -15,16 +15,19 @@ L_V = M_V * d_V;
 L_H = M_H * d_H;
 
 %% first find the elevation orthogonal to 90 degree
-theta = []; % 0 as the elevation reference
-
-for k = -2*d_V*M_V:1:2*d_V*M_V
-    omega = k / L_V;
-    val = asin(omega + sin(elref));
-    if isreal(val)
-        if (val == pi/2 || val == -pi/2) && d_V == 1/2 && ismember(-val,theta)
-        
-        else
-            theta = [theta val];
+if M_V == 1
+    theta = elref;
+else
+    theta = [];
+    for k = -2*d_V*M_V:1:2*d_V*M_V
+        omega = k / L_V;
+        val = asin(omega + sin(elref));
+        if isreal(val)
+            if (val == pi/2 || val == -pi/2) && d_V == 1/2 && ismember(-val,theta)
+            
+            else
+                theta = [theta val];
+            end
         end
     end
 end
