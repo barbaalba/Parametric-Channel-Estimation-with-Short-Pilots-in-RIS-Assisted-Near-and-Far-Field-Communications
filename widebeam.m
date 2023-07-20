@@ -40,7 +40,6 @@ if conf == 1
         end
 
     end
-    %save('WideSinglebeam16.mat','firsttarget','secondtarget');
     %% Plot 1
     %Prepare to plot colors on a sphere
     N = 540;
@@ -130,7 +129,6 @@ if conf == 1
     x_circ = cos(varphiAngles);
     y_circ = sin(varphiAngles);
     plot3(x_circ,y_circ,zeros(size(x_circ)),'k:','LineWidth',2);
-    %save('widebeam16.mat','firsttarget','secondtarget');
 else 
     [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,0,0); 
     % Consider below the RIS (Elevation <= 0)
