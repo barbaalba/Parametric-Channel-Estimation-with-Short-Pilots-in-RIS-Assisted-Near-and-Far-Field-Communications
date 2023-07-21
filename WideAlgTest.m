@@ -1,5 +1,4 @@
-% This code is to test the functionality of the implemented algorithm to
-% estimate the near field channel 
+% This code is to compare the wide beam and narrow beam initialization
 clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
@@ -8,7 +7,7 @@ NFConf = false; % True or false to specify which case to simulate (Near field or
 wideBF = true; % To start the algorithm with random choice or wide beams
 
 %UPA Element configuration
-M_H = 16; M_V = 16; M = M_H*M_V;
+M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
 Hsize = M_H*d_H*lambda;
 Vsize = M_V*d_V*lambda;
@@ -34,9 +33,9 @@ end
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
-varphiSRes = 8*M_H;
-thetaSRes = 8*M_V;
-distSRes = 8*M_H; % Distance resolution is very important to avoid convergence
+varphiSRes = M_H;
+thetaSRes = M_V;
+distSRes = M_H; % Distance resolution is very important to avoid convergence
 Plim = 32; % number of pilots
 
 %Set the SNR
@@ -55,8 +54,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 5;
+nbrOfAngleRealizations = 1;
+nbrOfNoiseRealizations = 1;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -71,29 +70,8 @@ SNR_w_total = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,0);
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
 
-
-% Define a fine grid of angle directions and distance to be used in
-% estimator
-varphi_range = linspace(-pi/2,pi/2,varphiSRes);
-theta_range = linspace(-pi/2,pi/2,thetaSRes);
-dist_range = zeros(1,distSRes);
-%dist_range(1:distSRes/2) = linspace(d_bjo,d_NF,distSRes/2);
-dist_range(:) = linspace(d_fraun/9,10*d_fraun,distSRes);
-
-% obtain the array response vectors for all azimuth-elevation-distance
-% triplet using the exact expression
-a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
-for l =1:length(dist_range) % for each distance
-    d_t = repelem(dist_range(l),1,varphiSRes);
-    parfor i = 1:length(theta_range) % for each elevation
-        a_range(:,:,i,l) = ...
-            nearFieldChan(d_t,varphi_range,repelem(theta_range(i),1,varphiSRes),U,lambda);
-    end
-end
-
-load('widebeam16.mat');
+load("WideTwobeam32.mat");
 widebeamresponses = [beamresponses,firsttarget,secondtarget];
-
 for n1 = 1:nbrOfAngleRealizations
     disp(n1);
     
@@ -105,8 +83,25 @@ for n1 = 1:nbrOfAngleRealizations
     end
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,pi/3,1);
-    g = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
 
+    % Define a fine grid of angle directions and distance to be used in
+    % estimator
+    varphi_range = linspace(azimuth-pi/24,azimuth+pi/24,varphiSRes);
+    theta_range = linspace(elevation-pi/24,elevation+pi/24,thetaSRes);
+    dist_range = zeros(1,distSRes);
+    dist_range(:) = linspace(d_t-(9/16)*d_fraun,d_t+(9/16)*d_fraun,distSRes);
+    % obtain the array response vectors for all azimuth-elevation-distance
+    % triplet using the exact expression
+    a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
+    for l =1:length(dist_range) % for each distance
+        d_red = repelem(dist_range(l),1,varphiSRes);
+        parfor i = 1:length(theta_range) % for each elevation
+            a_range(:,:,i,l) = ...
+                nearFieldChan(d_red,varphi_range,repelem(theta_range(i),1,varphiSRes),U,lambda);
+        end
+    end
+
+    g = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
     var_amp_d= 64;
     d = sqrt(var_amp_d/2) * (randn + 1i*randn);
 
@@ -244,5 +239,10 @@ hold on;
 plot(pow2db(SNR_w_total_new),'LineWidth',2);
 legend('Narrowbeam','Widebeam');
 
-save('3DWide_Narrow16Data_5.mat','rate_proposed','rate_wide','SNR_total',...
-    'SNR_w_total','capacity','Plim');
+SNR = mean(mean(SNR_total,3),1);
+SNRw = mean(mean(SNR_w_total,3),1);
+figure;
+cdfplot(pow2db(SNR));
+hold on;
+cdfplot(pow2db(SNRw));
+legend('Random Beam Initialization','Wide Beam Initialization','interpreter','latex');
