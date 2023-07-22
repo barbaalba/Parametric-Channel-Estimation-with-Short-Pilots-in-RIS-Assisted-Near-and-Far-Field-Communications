@@ -35,7 +35,7 @@ end
 % search resolution (It is very important)
 varphiSRes = M_H;
 thetaSRes = M_V;
-distSRes = M_H; % Distance resolution is very important to avoid convergence
+distSRes = 2*M_H; % Distance resolution is very important to avoid convergence
 Plim = 32; % number of pilots
 
 %Set the SNR
@@ -54,8 +54,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 1;
-nbrOfNoiseRealizations = 1;
+nbrOfAngleRealizations = 20;
+nbrOfNoiseRealizations = 5;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -242,7 +242,9 @@ legend('Narrowbeam','Widebeam');
 SNR = mean(mean(SNR_total,3),1);
 SNRw = mean(mean(SNR_w_total,3),1);
 figure;
-cdfplot(pow2db(SNR));
-hold on;
 cdfplot(pow2db(SNRw));
-legend('Random Beam Initialization','Wide Beam Initialization','interpreter','latex');
+hold on;
+cdfplot(pow2db(SNR));
+legend('Wide beam initialization','Random initialization','interpreter','latex');
+save('FinalResult_WideCompare.mat','rate_proposed','rate_wide',...
+    'capacity','Plim','SNR_w_total','SNR_total');
