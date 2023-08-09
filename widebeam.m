@@ -3,8 +3,8 @@ freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 
 % RIS parameters
-M_H = 16; M_V = 16; M = M_H*M_V;
-d_H = 1/4;d_V = 1/4;
+M_H = 32; M_V = 32; M = M_H*M_V;
+d_H = 1/2;d_V = 1/2;
 conf  = 1; % 1= widebam, 2= Hedgehog shape beam
 if conf == 1   
     N_s = 0.5*M_H/d_H;
