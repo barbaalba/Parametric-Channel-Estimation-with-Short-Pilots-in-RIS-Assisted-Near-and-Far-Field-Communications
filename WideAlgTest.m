@@ -35,8 +35,8 @@ end
 % search resolution (It is very important)
 varphiSRes = M_H;
 thetaSRes = M_V;
-distSRes = 2*M_H; % Distance resolution is very important to avoid convergence
-Plim = 32; % number of pilots
+distSRes = M_H; % Distance resolution is very important to avoid convergence
+Plim = 20; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = 0;
@@ -54,8 +54,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 20;
-nbrOfNoiseRealizations = 5;
+nbrOfAngleRealizations = 500;
+nbrOfNoiseRealizations = 4;
 
 
 %Save the rates achieved at different iterations of the algorithm
@@ -79,7 +79,7 @@ for n1 = 1:nbrOfAngleRealizations
     if NFConf
         d_t = unifrnd(d_bjo,d_NF,1);
     else
-        d_t = unifrnd(d_fraun,10*d_fraun);
+        d_t = unifrnd(d_NF,10*d_fraun);
     end
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,pi/3,1);
@@ -89,7 +89,9 @@ for n1 = 1:nbrOfAngleRealizations
     varphi_range = linspace(azimuth-pi/24,azimuth+pi/24,varphiSRes);
     theta_range = linspace(elevation-pi/24,elevation+pi/24,thetaSRes);
     dist_range = zeros(1,distSRes);
-    dist_range(:) = linspace(d_t-(9/16)*d_fraun,d_t+(9/16)*d_fraun,distSRes);
+    mind = max([d_NF,d_t-d_fraun/4]);
+    maxd = min([10*d_fraun,d_t+d_fraun/4]);
+    dist_range(:) = linspace(mind,maxd,distSRes);
     % obtain the array response vectors for all azimuth-elevation-distance
     % triplet using the exact expression
     a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
@@ -228,23 +230,44 @@ ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
-legend('Capacity','Widebeam','NarrowBeam','Interpreter','latex');
+legend('Capacity','Widebeam beam initialization','Random initialization','Interpreter','latex');
 grid on; 
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
 
-SNR_w_total_new = mean(mean(SNR_w_total,3),2);
-SNR_total_new = mean(mean(SNR_total,3),2);
-figure;
-plot(pow2db(SNR_total_new),'LineWidth',2);
-hold on;
-plot(pow2db(SNR_w_total_new),'LineWidth',2);
-legend('Narrowbeam','Widebeam');
 
-SNR = mean(mean(SNR_total,3),1);
-SNRw = mean(mean(SNR_w_total,3),1);
+% SNR_w_total_new = mean(mean(SNR_w_total,3),2);
+% SNR_total_new = mean(mean(SNR_total,3),2);
+% figure;
+% plot(pow2db(SNR_total_new),'LineWidth',2);
+% hold on;
+% plot(pow2db(SNR_w_total_new),'LineWidth',2);
+% legend('Narrowbeam','Widebeam');
+
+SNR = mean(SNR_total,3);
+SNR = mean(SNR(1:2,:),1);
+SNRw = mean(SNR_w_total,3);
+SNRw = mean(SNRw(1:2,:),1);
 figure;
 cdfplot(pow2db(SNRw));
 hold on;
 cdfplot(pow2db(SNR));
 legend('Wide beam initialization','Random initialization','interpreter','latex');
-save('FinalResult_WideCompare.mat','rate_proposed','rate_wide',...
+xlabel('SNR [dB]','Interpreter','latex');
+ylabel('CDF','Interpreter','latex');
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+save('FinalResultWidecom.mat','rate_proposed','rate_wide',...
     'capacity','Plim','SNR_w_total','SNR_total');
