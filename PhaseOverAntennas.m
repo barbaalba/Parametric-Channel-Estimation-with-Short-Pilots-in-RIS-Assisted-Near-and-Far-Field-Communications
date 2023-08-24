@@ -21,15 +21,46 @@ for m = 1:M
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
 az = pi/3;
-el = 0;
-dist = mean([d_bjo,d_NF]);
+el = pi/6;
+
+%% Far-Field phase variation over surfce
 x = UPA_Evaluate(lambda,M_V,M_H,az,el,d_V,d_H);
-x = reshape(x,M_H,M_V);
+x = transpose(reshape(x,M_H,M_V));
+x = flip(x,1);
 figure;
 imagesc(angle(x));
 colormap(flipud(hot));
+xlabel('$N_{\mathrm{H}}$','Interpreter','latex','FontSize',20);
+ylabel('$N_{\mathrm{V}}$','Interpreter','latex','FontSize',20);
+xticklabels([]);
+yticklabels([]);
+% Figure size
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+
+%% Near-Field phase variation over surface
 x = nearFieldChan(d_bjo,az,el,U,lambda);
-x = reshape(x,M_H,M_V);
+x = transpose(reshape(x,M_H,M_V));
+x = flip(x,1);
 figure;
 imagesc(angle(x));
 colormap(flipud(hot));
+xticklabels([]);
+yticklabels([]);
+xlabel('$N_{\mathrm{H}}$','Interpreter','latex','FontSize',20);
+ylabel('$N_{\mathrm{V}}$','Interpreter','latex','FontSize',20);
+% Figure size
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
