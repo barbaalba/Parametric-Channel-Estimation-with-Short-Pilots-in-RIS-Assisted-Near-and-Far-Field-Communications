@@ -5,7 +5,7 @@ clc;clear;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = true; % True or false to specify which case to simulate (Near field or far field)
-LSConf = false; % To include the LS estimation of the channel
+LSConf = true; % To include the LS estimation of the channel
 
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
@@ -36,8 +36,8 @@ end
 % search resolution (It is very important)
 varphiSRes = M_H;
 thetaSRes = M_V;
-distSRes = 2*M_H; % Distance resolution is very important to avoid convergence
-Plim = M_H; % number of pilots
+distSRes = M_H; % Distance resolution is very important to avoid convergence
+Plim = 1024; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = 0;
@@ -55,8 +55,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 20;
-nbrOfNoiseRealizations = 5;
+nbrOfAngleRealizations = 10;
+nbrOfNoiseRealizations = 1;
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
@@ -80,7 +80,7 @@ for n1 = 1:nbrOfAngleRealizations
     if NFConf
         d_t = unifrnd(d_bjo,d_NF,1);
     else
-        d_t = unifrnd(d_fraun,10*d_fraun);
+        d_t = unifrnd(d_NF,10*d_fraun);
     end
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,pi/3,1);
@@ -90,7 +90,9 @@ for n1 = 1:nbrOfAngleRealizations
     varphi_range = linspace(azimuth-pi/24,azimuth+pi/24,varphiSRes);
     theta_range = linspace(elevation-pi/24,elevation+pi/24,thetaSRes);
     dist_range = zeros(1,distSRes);
-    dist_range(:) = linspace(d_bjo,d_NF,distSRes);
+    mind = max([d_NF,d_t-d_fraun/4]);
+    maxd = min([10*d_fraun,d_t+d_fraun/4]);
+    dist_range(:) = linspace(mind,maxd,distSRes);
     % obtain the array response vectors for all azimuth-elevation-distance
     % triplet using the exact expression
     a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
@@ -129,7 +131,7 @@ for n1 = 1:nbrOfAngleRealizations
         B = RISconfigs';
 
         %Generate the noise
-        noise = (randn(CBL+2,1)+1i*randn(CBL+2,1))/sqrt(2);
+        noise = (randn(M+1,1)+1i*randn(M+1,1))/sqrt(2);
 
          %Go through iterations by adding extra RIS configurations in the estimation
         for itr = 1:Plim-1
@@ -245,17 +247,26 @@ end
 rate = mean(mean(rate_proposed,3),2);
 rate_LS = mean(mean(rate_LS,3),2);
 rate_FF = mean(mean(Far_rate_proposed,3),2);
-plot(2:Plim,repelem(mean(capacity),1,Plim-1),'LineWidth',2);
+plot(log2(2:Plim),repelem(mean(capacity),1,Plim-1),'LineWidth',2);
 hold on;
-plot(2:Plim,rate(1:Plim-1),'LineWidth',2);
-plot(2:Plim,rate_LS(1:Plim-1),'LineWidth',2);
-plot(2:Plim,rate_FF(1:Plim-1),'LineWidth',2);
+plot(log2(2:Plim),rate(1:Plim-1),'LineWidth',2);
+plot(log2(2:Plim),rate_FF(1:Plim-1),'LineWidth',2);
+plot(log2(2:Plim),rate_LS(1:Plim-1),'LineWidth',2);
 xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
 ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
-legend('Capacity','MLE','LS','Far-Field','Interpreter','latex');
+legend('Capacity','Generic method','Far-Field approximation','Least Squares','Interpreter','latex');
 grid on;
-save('FinalResult_NearField.mat','rate_proposed','rate_LS',...
-    'Far_rate_proposed','capacity','Plim','SNR_generic','SNR_far');
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+
+save('FinalNFLSMonteLong.mat','rate_proposed','rate_LS',...
+     'Far_rate_proposed','capacity','Plim','SNR_generic','SNR_far');
