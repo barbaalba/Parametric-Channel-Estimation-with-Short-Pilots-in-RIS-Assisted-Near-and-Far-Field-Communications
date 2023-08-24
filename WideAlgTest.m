@@ -33,16 +33,16 @@ end
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
-varphiSRes = M_H;
-thetaSRes = M_V;
-distSRes = M_H; % Distance resolution is very important to avoid convergence
+varphiSRes = 4*M_H;
+thetaSRes = 4*M_V;
+distSRes = 1; % Distance resolution is very important to avoid convergence
 Plim = 20; % number of pilots
 
 %Set the SNR
-SNRdB_pilot = 0;
+SNRdB_pilot = -10;
 SNR_pilot = db2pow(SNRdB_pilot);
 
-SNRdB_data = -10;
+SNRdB_data = -20;
 SNR_data = db2pow(SNRdB_data);
 
 %Select angle to the base station (known value)
@@ -54,7 +54,7 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 500;
+nbrOfAngleRealizations = 125;
 nbrOfNoiseRealizations = 4;
 
 
@@ -86,12 +86,12 @@ for n1 = 1:nbrOfAngleRealizations
 
     % Define a fine grid of angle directions and distance to be used in
     % estimator
-    varphi_range = linspace(azimuth-pi/24,azimuth+pi/24,varphiSRes);
-    theta_range = linspace(elevation-pi/24,elevation+pi/24,thetaSRes);
+    varphi_range = linspace(azimuth-pi/12,azimuth+pi/12,varphiSRes);
+    theta_range = linspace(elevation-pi/12,elevation+pi/12,thetaSRes);
     dist_range = zeros(1,distSRes);
     mind = max([d_NF,d_t-d_fraun/4]);
     maxd = min([10*d_fraun,d_t+d_fraun/4]);
-    dist_range(:) = linspace(mind,maxd,distSRes);
+    dist_range(:) = d_t;%linspace(mind,maxd,distSRes);
     % obtain the array response vectors for all azimuth-elevation-distance
     % triplet using the exact expression
     a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
@@ -124,7 +124,6 @@ for n1 = 1:nbrOfAngleRealizations
         end
         utilize(idx) = true;
           
-
         RISconfigs = Dh_angles*beamresponses(:,utilize);
         B = RISconfigs';   
 
@@ -250,10 +249,10 @@ set(fig,'position',[60 50 900 600]);
 % plot(pow2db(SNR_w_total_new),'LineWidth',2);
 % legend('Narrowbeam','Widebeam');
 
-SNR = mean(SNR_total,3);
-SNR = mean(SNR(1:2,:),1);
-SNRw = mean(SNR_w_total,3);
-SNRw = mean(SNRw(1:2,:),1);
+SNR = mean(SNR_total(1:2,:,:),1);
+SNR = reshape(SNR,1,size(SNR,2)*size(SNR,3));
+SNRw = mean(SNR_w_total(1:2,:,:),1);
+SNRw = reshape(SNRw,1,size(SNRw,2)*size(SNRw,3));
 figure;
 cdfplot(pow2db(SNRw));
 hold on;
@@ -269,5 +268,5 @@ ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to
                                   % axis
 fig = gcf;
 set(fig,'position',[60 50 900 600]);
-save('FinalResultWidecom.mat','rate_proposed','rate_wide',...
+save('FinalResultWideV4.mat','rate_proposed','rate_wide',...
     'capacity','Plim','SNR_w_total','SNR_total');
