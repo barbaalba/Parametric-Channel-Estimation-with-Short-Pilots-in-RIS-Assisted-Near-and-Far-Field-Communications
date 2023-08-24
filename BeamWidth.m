@@ -1,5 +1,5 @@
-% This code is intended to demonstrate the beamwidth over different azimuth 
-% angle
+% This code is intended to demonstrate the beam shape over different azimuth 
+% angle and distances
 clear;clc;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
@@ -24,15 +24,15 @@ for m = 1:M
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
 % define the plane 
-x_t = linspace(0,d_fraun/4,1000); % cover different distances
+x_t = linspace(0,d_fraun/5,2000); % cover different distances
 z_t = repelem(0,1,length(x_t)); % Elevation angle of zero
 y_t = linspace(-d_fraun/2,d_fraun/2,length(x_t)); % cover different azimuth
-az = [0,pi/3,-pi/3]; % Which azimuth to consider for beamforming
+az = [0,pi/6,-pi/6]; % Which azimuth to consider for beamforming
 pow = zeros(length(y_t),length(x_t),length(az));
 
 for j = 1:length(az)
     % Near-field array response
-    nearChan1 = nearFieldChan(d_bjo,az(j),0,U,lambda); 
+    nearChan1 = nearFieldChan(2*d_fraun,az(j),0,U,lambda); 
     % Vector response on the plane parallel to X-Y plane 
     parfor i = 1:length(x_t)
         [azimuth,elevation,Cph,d_t] = ChanParGen(repelem(x_t(i),1,length(y_t)),y_t,z_t,Ant_Center,lambda);
@@ -43,7 +43,7 @@ for j = 1:length(az)
 end
 % Process the data
 pow = pow2db(pow);
-pow(pow<max(pow,[],'all')-3) = 0;
+pow(pow<0) = 0;
 pow = max(pow,[],3);
 % Plot the combined figure
 figure("defaultAxesFontSize",20,"DefaultLineLineWidth", 2,...
@@ -51,3 +51,14 @@ figure("defaultAxesFontSize",20,"DefaultLineLineWidth", 2,...
 imagesc([x_t(1) x_t(end)],[y_t(1) y_t(end)],pow);
 xlabel('X (m)','FontSize',20,'Interpreter','latex');
 ylabel('Y (m)','FontSize',20,'Interpreter','latex');
+hold on
+plot([0,0],[-Hsize/2,Hsize/2],'LineWidth',10,'Color','r');
+% Figure size
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
