@@ -9,6 +9,10 @@
 - Tightness.m: To understand far-field and first order approximation of the channel. 
 
 # Improtant Functions
+- widebeam.m: To generate Figures 6 and 7 in the paper.
+- wideAlgTest.m: To generate Figures 8 and 9.
+- AlgTestOptimized.m: To generate Figures 10 and 11. It needs  to be configured to correspond to either far-field or near-field scenarios.
+- randomwalkRun.m: To generate Figure 12.
 - AlgTest.m: The main code to test the efficiency and effectiveness of the generic channel estimation algorithm. It generates the figures [] and []
 - AzElGraph.m: It plots set of angles that leads to orthogonal beams. Figure [] in the paper. 
 - BestCodeBook.m: It plots 3D figure where we understand what is the best initialization angle to generate the code book. Figure [] in the paper.
@@ -19,7 +23,7 @@
 - UPA_Codebook.m: Generate array responses of the orthogonal angle pairs.
 - ChanParGen.m: 
 - distanceCorr.m: 
-
+  
 # Random Walk functions
 - plotTrajectory.m: plot the trajectory of the random walk in the room 
 - randomwalk.m: It generate a random walk scenario in a confined room with given size 
