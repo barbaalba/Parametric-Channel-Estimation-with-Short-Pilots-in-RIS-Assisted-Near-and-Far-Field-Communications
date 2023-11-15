@@ -3,6 +3,7 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
+Kfactor = 10; % Rician K factor in dB
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
@@ -24,8 +25,9 @@ for m = 1:M
     zm = (-(M_V-1)/2 + j(m))*d_V*lambda; % dislocation with respect to center in z direction
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
+R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 % BS config
-N = 8; d_H_BS = 1/2;
+N = 64; d_H_BS = 1/2;
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
@@ -54,8 +56,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 250;
-nbrOfNoiseRealizations = 4;
+nbrOfAngleRealizations = 1;
+nbrOfNoiseRealizations = 1;
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
@@ -97,9 +99,11 @@ for n1 = 1:nbrOfAngleRealizations
                 nearFieldChan(d_red,varphi_range,repelem(theta_range(i),1,varphiSRes),U,lambda);
         end
     end
-    g = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
+    g = nearFieldChan(d_t,azimuth,elevation,U,lambda) + ...
+        sqrtm(R)* sqrt(1/db2pow(Kfactor)/2)*(randn(M,1) + 1i*randn(M,1)); 
     var_amp_d= 64;
-    d = sqrt(var_amp_d/2) * (randn(N,1) + 1i*randn(N,1));
+    d = sqrt(var_amp_d/2) * ULA_Evaluate(lambda,N,unifrnd(-pi/3,pi/3,1),d_H_BS) + ...
+        sqrt(var_amp_d/2/db2pow(Kfactor))*(randn(N,1) + 1i*randn(N,1));
 
     optRIS = altopt(H,g,d);
     %Compute the exact capacity for the system Eq. (3)
@@ -159,7 +163,7 @@ for n1 = 1:nbrOfAngleRealizations
         end
     end
 end
-save('MultipleAntennaFarField.mat','Plim','rate_proposed','capacity','d_NMSE_proposed','g_NMSE_proposed');
+save('MultipleAntennaFarField_Rician.mat','Plim','rate_proposed','capacity','d_NMSE_proposed','g_NMSE_proposed');
 plot(2:Plim,repelem(mean(capacity),1,Plim-1),'--k','LineWidth',2);
 rate = mean(mean(rate_proposed,3),2);
 hold on;
