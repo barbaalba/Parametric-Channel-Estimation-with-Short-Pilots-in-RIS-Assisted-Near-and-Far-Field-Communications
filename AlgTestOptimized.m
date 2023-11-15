@@ -4,8 +4,11 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-NFConf = true; % True or false to specify which case to simulate (Near field or far field)
-LSConf = true; % To include the LS estimation of the channel
+NFConf = false; % True or false to specify which case to simulate (Near field or far field)
+LSConf = false; % To include the LS estimation of the channel
+Far_approx = false;
+Racian = true; % The Rician channel model 
+K = db2pow(10); % Rician K-factor in dB
 
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
@@ -31,13 +34,14 @@ for m = 1:M
     zm = (-(M_V-1)/2 + j(m))*d_V*lambda; % dislocation with respect to center in z direction
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
+R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
 varphiSRes = M_H;
 thetaSRes = M_V;
 distSRes = M_H; % Distance resolution is very important to avoid convergence
-Plim = 1024; % number of pilots
+Plim = 20; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = 0;
@@ -55,8 +59,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 1;
+nbrOfAngleRealizations = 150;
+nbrOfNoiseRealizations = 4;
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
@@ -65,6 +69,10 @@ Far_rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 rate_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 SNR_generic = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 SNR_far = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+d_NMSE_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+g_NMSE_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+Far_d_NMSE_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+Far_g_NMSE_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 %% Iniitilize channel estimation 
 [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,0);
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
@@ -112,10 +120,17 @@ for n1 = 1:nbrOfAngleRealizations
     a_FarAppx_range(:,:,i) = ...
     UPA_Evaluate(lambda,M_V,M_H,varphi_range,repelem(theta_range(i),1,varphiSRes),d_V,d_H);
     end
-
-    g = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
-    var_amp_d= 64;
-    d = sqrt(var_amp_d/2) * (randn + 1i*randn);
+    
+    if ~Racian     
+        g = nearFieldChan(d_t,azimuth,elevation,U,lambda); 
+        var_amp_d= 64;
+        d = sqrt(var_amp_d/2) * (randn + 1i*randn);
+    else
+        g = sqrt(K/(K+1)) * nearFieldChan(d_t,azimuth,elevation,U,lambda) + ...
+            sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
+        var_amp_d= 64;
+        d = sqrt(var_amp_d/2) * (randn + 1i*randn);
+    end
 
     %Compute the exact capacity for the system Eq. (3)
     capacity(n1) = log2(1+SNR_data*(sum(abs(Dh*g)) + abs(d)).^2);
@@ -140,8 +155,12 @@ for n1 = 1:nbrOfAngleRealizations
             y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
             
             % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+            [d_est,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
             
+            % Estimation performance
+            d_NMSE_proposed(itr,n1,n2) = norm(d_est - d)^2 / norm(d)^2;
+            g_NMSE_proposed(itr,n1,n2) = norm(g_est - g)^2 / norm(g)^2;
+
             %Estimate the RIS configuration that (approximately) maximizes the SNR
             RISconfig = angle(Dh*g_est)-var_phas_d_est;
 
@@ -173,50 +192,55 @@ for n1 = 1:nbrOfAngleRealizations
         SNR_generic(:,n1,n2) = (abs(sqrt(SNR_pilot)*(B*Dh*g + d)).^2) ./ abs(noise(1:itr+1,1)).^2;
 
         %% Far-Field approximation of the channel
-        %Select which two RIS configurations from the grid of beams to start with
-        utilize = false(CBL+2,1);
-        utilize(end-1:end) = true;
-        %Define the initial transmission setup
-        RISconfigs = Dh_angles*Farbeamresponses(:,utilize);
-        B = RISconfigs';
-
-        %Go through iterations by adding extra RIS configurations in the estimation
-        for itr = 1:Plim-1
-            %Generate the received signal
-            y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
-            
-            % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_FarAppx_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
-         
-         
-            %Estimate the RIS configuration that (approximately) maximizes the SNR
-            RISconfig = angle(Dh*g_est)-var_phas_d_est;
-            
-            %Compute the corresponding achievable rate
-            Far_rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g + d)^2);
-
-            %Find an extra RIS configuration to use for pilot transmission
-            if itr < Plim-1
-                %Find which angles in the grid-of-beams haven't been used
-                unusedBeamresponses = Farbeamresponses;
-                unusedBeamresponses(:,utilize==1) = 0;
-
-                %Guess what the channel would be with the different beams
-                guessBeam = Dh*unusedBeamresponses;
-
-                %Find which of the guessed channels matches best with the
-                %currently best RIS configuration
-                closestBeam = abs(exp(-1i*RISconfig).'*guessBeam); 
-                [~,bestUnusedBeamidx] = max(closestBeam);
-
-                %Add a pilot transmission using the new RIS configuration
-                utilize(bestUnusedBeamidx) = true;
-                RISconfigs = Dh_angles*Farbeamresponses(:,utilize);
-                B = RISconfigs';
+        if Far_approx
+            %Select which two RIS configurations from the grid of beams to start with
+            utilize = false(CBL+2,1);
+            utilize(end-1:end) = true;
+            %Define the initial transmission setup
+            RISconfigs = Dh_angles*Farbeamresponses(:,utilize);
+            B = RISconfigs';
+    
+            %Go through iterations by adding extra RIS configurations in the estimation
+            for itr = 1:Plim-1
+                %Generate the received signal
+                y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
+                
+                % Estimate the Channel using the developed MLE
+                [d_est,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_FarAppx_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+                
+                % Estimation performance
+                Far_d_NMSE_proposed(itr,n1,n2) = norm(d_est - d)^2 / norm(d)^2;
+                Far_g_NMSE_proposed(itr,n1,n2) = norm(g_est - g)^2 / norm(g)^2;
+             
+                %Estimate the RIS configuration that (approximately) maximizes the SNR
+                RISconfig = angle(Dh*g_est)-var_phas_d_est;
+                
+                %Compute the corresponding achievable rate
+                Far_rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g + d)^2);
+    
+                %Find an extra RIS configuration to use for pilot transmission
+                if itr < Plim-1
+                    %Find which angles in the grid-of-beams haven't been used
+                    unusedBeamresponses = Farbeamresponses;
+                    unusedBeamresponses(:,utilize==1) = 0;
+    
+                    %Guess what the channel would be with the different beams
+                    guessBeam = Dh*unusedBeamresponses;
+    
+                    %Find which of the guessed channels matches best with the
+                    %currently best RIS configuration
+                    closestBeam = abs(exp(-1i*RISconfig).'*guessBeam); 
+                    [~,bestUnusedBeamidx] = max(closestBeam);
+    
+                    %Add a pilot transmission using the new RIS configuration
+                    utilize(bestUnusedBeamidx) = true;
+                    RISconfigs = Dh_angles*Farbeamresponses(:,utilize);
+                    B = RISconfigs';
+                end
             end
+            SNR_far(:,n1,n2) = (abs(sqrt(SNR_pilot)*(B*Dh*g + d)).^2) ./ abs(noise(1:itr+1,1)).^2;
         end
-        SNR_far(:,n1,n2) = (abs(sqrt(SNR_pilot)*(B*Dh*g + d)).^2) ./ abs(noise(1:itr+1,1)).^2;
-        %%
+        %% LS estimation
         if LSConf
             %LS estimation
             DFT = fft(eye(M+1));
@@ -268,5 +292,27 @@ ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to
 fig = gcf;
 set(fig,'position',[60 50 900 600]);
 
-save('FinalNFLSMonteLong.mat','rate_proposed','rate_LS',...
-     'Far_rate_proposed','capacity','Plim','SNR_generic','SNR_far');
+figure;
+d_NMSE = mean(mean(d_NMSE_proposed,3),2);
+g_NMSE = mean(mean(g_NMSE_proposed,3),2);
+plot(2:Plim,pow2db(d_NMSE(1:Plim-1)),'LineWidth',2);
+hold on;
+plot(2:Plim,pow2db(g_NMSE(1:Plim-1)),'LineWidth',2);
+ylabel('NMSE [dB]','FontSize',20,'Interpreter','latex');
+xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
+fig = gcf;
+fig.Children.FontSize = 20;
+legend('Direct channel $\mathbf{d}$','Channel to the RIS $\mathbf{g}$','Fontsize',20,'interpreter','latex');
+grid on;
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+
+save('FinalSISORician.mat','rate_proposed','rate_LS',...
+     'Far_rate_proposed','capacity','Plim','SNR_generic','SNR_far',...
+     'd_NMSE_proposed','g_NMSE_proposed');
