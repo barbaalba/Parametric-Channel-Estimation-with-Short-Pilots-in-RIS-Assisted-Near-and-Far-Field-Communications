@@ -4,7 +4,8 @@ clc;clear;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = false; % True or false to specify which case to simulate (Near field or far field)
-wideBF = true; % To start the algorithm with random choice or wide beams
+wideBF = false; % To start the algorithm with random choice or wide beams
+dynamic = false; % Dynamic reconfiguration of the RIS 
 
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
@@ -54,7 +55,7 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 125;
+nbrOfAngleRealizations = 250;
 nbrOfNoiseRealizations = 4;
 
 
@@ -117,24 +118,29 @@ for n1 = 1:nbrOfAngleRealizations
 
         % Estimate the channel using either all pilots or some of them
         %Select which two RIS configurations from the grid of beams to start with
-        utilize = false(CBL,1);
-        idx = unidrnd(CBL,2,1);
-        while idx(1) == idx(2)
-            idx(2) = unidrnd(CBL);
+        if dynamic
+            utilize = false(CBL,1);
+            idx = unidrnd(CBL,2,1);
+            while idx(1) == idx(2)
+                idx(2) = unidrnd(CBL);
+            end
+            utilize(idx) = true;
+        else
+            idx = randperm(CBL);
+            utilize(idx(1:Plim)) = true;
         end
-        utilize(idx) = true;
           
         RISconfigs = Dh_angles*beamresponses(:,utilize);
-        B = RISconfigs';   
+        B = RISconfigs'; % [Plim * N]   
 
          %Go through iterations by adding extra RIS configurations in the estimation
         for itr = 1:Plim-1
 
             %Generate the received signal
-            y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
+            y =  sqrt(SNR_pilot)*(B(1:itr+1,:)*Dh*g + d) + noise(1:itr+1,1);
  
             % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+            [~,var_phas_d_est,~,~,g_est,~,~] = MLE3D(y,itr+1,B(1:itr+1,:),Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
             
             %Estimate the RIS configuration that (approximately) maximizes the SNR
             RISconfig = angle(Dh*g_est)-var_phas_d_est;
@@ -143,7 +149,7 @@ for n1 = 1:nbrOfAngleRealizations
             rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(exp(-1i*RISconfig).'*Dh*g + d)^2);
      
             %Find an extra RIS configuration to use for pilot transmission
-            if itr < Plim-1 
+            if itr < Plim-1 && dynamic
 
                 %Find which angles in the grid-of-beams haven't been used
                 unusedBeamresponses = beamresponses;
@@ -165,7 +171,7 @@ for n1 = 1:nbrOfAngleRealizations
             end   
         end
 
-        SNR_total(:,n1,n2) = (abs(sqrt(SNR_pilot)*(B*Dh*g + d)).^2) ./ abs(noise(1:itr+1,1)).^2;
+        SNR_total(:,n1,n2) = (abs(sqrt(SNR_pilot)*(B(1:itr+1,:)*Dh*g + d)).^2) ./ abs(noise(1:itr+1,1)).^2;
 
         if wideBF
 
