@@ -20,16 +20,17 @@ for m = 1:M
     zm = (-(M_V-1)/2 + j(m))*d_V*lambda; % dislocation with respect to center in z direction
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
-az = pi/3;
-el = pi/6;
+az = 0;
+el = 0;
 
 %% Far-Field phase variation over surfce
-x = UPA_Evaluate(lambda,M_V,M_H,az,el,d_V,d_H);
+x = nearFieldChan(100*d_fraun,az,el,U,lambda);
 x = transpose(reshape(x,M_H,M_V));
 x = flip(x,1);
 figure;
 imagesc(angle(x));
 colormap(flipud(hot));
+caxis([-pi/8 pi/8]);
 xlabel('$N_{\mathrm{H}}$','Interpreter','latex','FontSize',20);
 ylabel('$N_{\mathrm{V}}$','Interpreter','latex','FontSize',20);
 xticklabels([]);
@@ -45,12 +46,13 @@ fig = gcf;
 set(fig,'position',[60 50 900 600]);
 
 %% Near-Field phase variation over surface
-x = nearFieldChan(d_bjo,az,el,U,lambda);
+x = nearFieldChan(d_fraun,az,el,U,lambda);
 x = transpose(reshape(x,M_H,M_V));
 x = flip(x,1);
 figure;
 imagesc(angle(x));
 colormap(flipud(hot));
+caxis([-pi/8 pi/8]);
 xticklabels([]);
 yticklabels([]);
 xlabel('$N_{\mathrm{H}}$','Interpreter','latex','FontSize',20);
