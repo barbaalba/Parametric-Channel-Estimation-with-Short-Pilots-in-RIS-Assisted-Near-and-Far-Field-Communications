@@ -3,7 +3,7 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-K = db2pow(1000); % Rician K-factor in dB
+K = db2pow(8); % Rician K-factor in dB
 Hierarchical_Search = true;
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
@@ -29,13 +29,13 @@ end
 R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 
 if Hierarchical_Search
-    W_Hierarch = ULA_Hierarchical(lambda,M,d_H);
+    W_Hierarch = UPA_Hierarchical(lambda,M_H,M_V,d_H,d_V);
 end
 %% Channel Estimation Parameters
 % search resolution (It is very important)
 varphiSRes = 4*M_H;
 thetaSRes = 1; % We consider far-field and elevation 0 
-Plim = 2*log2(M); % number of pilots limited by Hierachical search
+Plim = 4*log2(M_H); % number of pilots limited by Hierachical search
 
 % Define a fine grid of angle directions and distance to be used in
 % estimator
@@ -65,10 +65,6 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-h_Hierachical = ULA_Evaluate(lambda,M,varphi_BS,d_H); % for signle BS
-Dh_Hierachical = diag(h_Hierachical);
-Dh_angles_Hierarchical = diag(h_Hierachical./abs(h_Hierachical));
-
 nbrOfAngleRealizations = 100;
 nbrOfNoiseRealizations = 10;
 
@@ -90,18 +86,12 @@ for n1 = 1:nbrOfAngleRealizations
     disp(n1);
 
     azimuth = unifrnd(-pi/3,pi/3,1);
-    elevation = 0;
+    elevation = unifrnd(-pi/3,pi/3,1);
 
     g = sqrt(K/(K+1)) * UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V,d_H) + ...
             sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
     var_amp_d= 64;
     d = sqrt(var_amp_d/2) * (randn + 1i*randn);
-
-    if Hierarchical_Search
-        g_Hierarchical = sqrt(K/(K+1)) * ULA_Evaluate(lambda,M,azimuth,d_H) + ...
-                    sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
-        capacity_Hierchical(n1) = log2(1+SNR_data*sum(abs(Dh_Hierachical*g_Hierarchical))^2);
-    end
 
     %Compute the exact capacity for the system Eq. (3)
     capacity(n1) = log2(1+SNR_data*(sum(abs(Dh*g)) + abs(d)).^2);
@@ -184,14 +174,18 @@ for n1 = 1:nbrOfAngleRealizations
         if Hierarchical_Search
             for k = 1:size(W_Hierarch,3)
                 if k == 1
-                    Beamidx = 1:2;
+                    Beamidx = 1:4;
                 end
-                B = (Dh_angles_Hierarchical*W_Hierarch(:,Beamidx,k))';
-                y = sqrt(SNR_pilot)*(B*Dh_Hierachical*g_Hierarchical + d) + noise(2*k-1:2*k,1);
+                B = (Dh_angles*W_Hierarch(:,Beamidx,k))';
+                y = sqrt(SNR_pilot)*(B*Dh*g + d) + noise(4*(k-1)+1:4*k,1);
                 [~,idx_max] = max(abs(y).^2);
+                Bestidx = Beamidx(idx_max);
                 RISconfig = B(idx_max,:);
-                rate_Hierchical(k*2,n1,n2) = log2(1+SNR_data*abs(RISconfig*Dh_Hierachical*g_Hierarchical + d).^2);
-                Beamidx = Beamidx(idx_max)*2-1:Beamidx(idx_max)*2;
+                rate_Hierchical(k*4,n1,n2) = log2(1+SNR_data*abs(RISconfig*Dh*g + d).^2);
+                Beamidx(1:2) = 2*Bestidx-1:2*Bestidx; 
+                Beamidx(3:4) = Beamidx(1:2) + 2^(k+1);
+                Beamidx = Beamidx + 2^(k+1)*floor((Bestidx-1)/2^k);
+                %Beamidx = Beamidx(idx_max)*2-1:Beamidx(idx_max)*2;
             end
         end
         
@@ -200,17 +194,16 @@ end
 
 plot(2:Plim,repelem(mean(capacity),1,Plim-1),'--k','LineWidth',2);
 hold on;
-plot(2:Plim,repelem(mean(capacity_Hierchical),1,Plim-1),'--k','LineWidth',2);
 rate = mean(mean(rate_proposed,3),2);
 rate_H = mean(mean(rate_Hierchical,3),2);
 plot(2:Plim,rate(1:Plim-1),'LineWidth',2);
-plot(2:2:Plim,rate_H(2:2:Plim));
+plot(4:4:Plim,rate_H(4:4:Plim));
 xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
 ylabel('Spectral Efficiency [b/s/Hz/]','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 fig.Children.TickLabelInterpreter = 'latex';
-legend('Capacity','Capacity-Hierarchical','Widebeam beam initialization','Hierarchical Search','Interpreter','latex');
+legend('Capacity','Widebeam beam initialization','Hierarchical Search','Interpreter','latex');
 grid on; 
 ax = gca; % to get the axis handle
 ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
