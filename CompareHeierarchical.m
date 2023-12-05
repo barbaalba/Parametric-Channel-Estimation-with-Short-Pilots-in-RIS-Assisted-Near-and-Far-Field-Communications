@@ -3,7 +3,7 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-K = db2pow(1000); % Rician K-factor in dB
+
 Hierarchical_Search = true;
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
@@ -26,7 +26,6 @@ for m = 1:M
     zm = (-(M_V-1)/2 + j(m))*d_V*lambda; % dislocation with respect to center in z direction
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
-R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 
 if Hierarchical_Search
     W_Hierarch = UPA_Hierarchical(lambda,M_H,M_V,d_H,d_V);
@@ -88,8 +87,8 @@ for n1 = 1:nbrOfAngleRealizations
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,0,1);
 
-    g = sqrt(K/(K+1)) * UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V,d_H) + ...
-            sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
+    g = UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V,d_H);
+            
     var_amp_d= 64;
     d = sqrt(var_amp_d/2) * (randn + 1i*randn);
 
