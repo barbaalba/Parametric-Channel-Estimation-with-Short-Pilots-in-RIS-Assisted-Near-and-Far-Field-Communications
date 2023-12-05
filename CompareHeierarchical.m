@@ -3,7 +3,7 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-K = db2pow(8); % Rician K-factor in dB
+K = db2pow(1000); % Rician K-factor in dB
 Hierarchical_Search = true;
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
@@ -33,14 +33,14 @@ if Hierarchical_Search
 end
 %% Channel Estimation Parameters
 % search resolution (It is very important)
-varphiSRes = 4*M_H;
-thetaSRes = 1; % We consider far-field and elevation 0 
+varphiSRes = 16*M_H;
+thetaSRes = 2*M_H; % We consider far-field and elevation 0 
 Plim = 4*log2(M_H); % number of pilots limited by Hierachical search
 
 % Define a fine grid of angle directions and distance to be used in
 % estimator
 varphi_range = linspace(-pi/3,pi/3,varphiSRes);
-theta_range = 0;
+theta_range = linspace(-pi/3,0,thetaSRes);
 % obtain the array response vectors for all azimuth-elevation-distance
 % triplet using the exact expression
 a_range = zeros(M,varphiSRes,thetaSRes); % [M,Azimuth,Elevation]
@@ -65,8 +65,8 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 100;
-nbrOfNoiseRealizations = 10;
+nbrOfAngleRealizations = 5;
+nbrOfNoiseRealizations = 5;
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
@@ -80,13 +80,13 @@ rate_Hierchical = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
 
 load("WideTwobeam32.mat");
-widebeamresponses = conj([beamresponses,firsttarget,secondtarget]);
+widebeamresponses = conj(Dh_angles * [beamresponses,firsttarget,secondtarget]);
 
 for n1 = 1:nbrOfAngleRealizations
     disp(n1);
 
     azimuth = unifrnd(-pi/3,pi/3,1);
-    elevation = unifrnd(-pi/3,pi/3,1);
+    elevation = unifrnd(-pi/3,0,1);
 
     g = sqrt(K/(K+1)) * UPA_Evaluate(lambda,M_V,M_H,azimuth,elevation,d_V,d_H) + ...
             sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
@@ -101,75 +101,75 @@ for n1 = 1:nbrOfAngleRealizations
         %Generate the noise
         noise = (randn(CBL,1)+1i*randn(CBL,1))/sqrt(2);
 
-%         utilize = false(CBL+2,1);
-%         utilize(end-1:end) = true;
-% 
-%         RISconfigs = conj(Dh_angles)*widebeamresponses(:,utilize);
-%         B = RISconfigs.';   
-%         %Go through iterations by adding extra RIS configurations in the estimation
-%         for itr = 1:Plim-1
-% 
-%             %Generate the received signal
-%             y =  sqrt(SNR_pilot)*(B*Dh*g + d)  + noise(1:itr+1,1);
-%             
-%             L = itr+1;
-%             utility_num = zeros(varphiSRes,thetaSRes); %numerator of the utility function
-%             utility_den = zeros(varphiSRes,thetaSRes); %denominator of the utility function
-%             % [Az,El] Search
-%             for i = 1:thetaSRes
-%                 utility_num(:,i) = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* ...
-%                     B*Dh*a_range(:,:,i)).^2;
-%                 utility_den(:,i) = sum(abs(B*Dh*a_range(:,:,i)).^2,1) - (L)^-1 * ...
-%                     abs(ones(1,L)*B*Dh*a_range(:,:,i)).^2;
-%             end
-%            
-%              
-%             utilityfunction = utility_num ./ utility_den;
-%             %Extract the angle estimate
-%             [~,maxind] = max(utilityfunction,[],'all');
-%             [Azidx,Elidx] = ind2sub([varphiSRes,thetaSRes],maxind);
-%             a = a_range(:,Azidx,Elidx);
-% 
-%             %Estimate g
-%             var_amp_g_num = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* B*Dh*a)^2;
-%             var_amp_g_den = SNR_pilot * (sum(abs(B*Dh*a).^2,1) - ...
-%                 (L)^-1 * abs(ones(1,L)*B*Dh*a)^2)^2;
-%             var_amp_g_est = var_amp_g_num/var_amp_g_den;
-%             var_phas_g_est = - angle (y' * (eye(L) - (L)^-1 * ones(L,L))* B*Dh*a);
-%             g_est = sqrt(var_amp_g_est) * exp(1i*var_phas_g_est) *a;
-% 
-%             %Estimate d
-%             var_amp_d_est = (SNR_pilot)^-1 * (L)^-2 * abs (ones(1,L) * (y - sqrt(SNR_pilot)*B*Dh*g_est))^2;
-%             var_phas_d_est = angle (ones(1,L) * (y - sqrt(SNR_pilot)*B*Dh*g_est));
-%             d_est = sqrt(var_amp_d_est) * exp(1i*var_phas_d_est);
-%             
-%             RISconfig = exp(-1i*(angle(Dh*g_est)-var_phas_d_est));
-% 
-%             %Compute the corresponding achievable rate
-%             rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(RISconfig.'*Dh*g + d).^2);
-%      
-%             %Find an extra RIS configuration to use for pilot transmission
-%             if itr < Plim -1 
-% 
-%                 %Find which angles in the grid-of-beams haven't been used
-%                 unusedBeamresponses = widebeamresponses;
-%                 unusedBeamresponses(:,utilize==1) = 0;
-%                 %Guess what the channel would be with the different beams
-%                 guessBeam = conj(Dh_angles)*unusedBeamresponses;
-% 
-%                 %Find which of the guessed channels matches best with the
-%                 %currently best RIS configuration
-%                 closestBeam = abs(RISconfig'*guessBeam); 
-%                 [~,bestUnusedBeamidx] = max(closestBeam);
-% 
-% 
-%                 %Add a pilot transmission using the new RIS configuration
-%                 utilize(bestUnusedBeamidx) = true;
-%                 RISconfigs = conj(Dh_angles)*widebeamresponses(:,utilize);
-%                 B = RISconfigs.';
-% 
-%             end
-%         end
+        utilize = false(CBL+2,1);
+        utilize(end-1:end) = true;
+
+        RISconfigs = widebeamresponses(:,utilize);
+        B = RISconfigs.';   
+        %Go through iterations by adding extra RIS configurations in the estimation
+        for itr = 1:Plim-1
+
+            %Generate the received signal
+            y =  sqrt(SNR_pilot)*(B*Dh*g + d)  + noise(1:itr+1,1);
+            
+            L = itr+1;
+            utility_num = zeros(varphiSRes,thetaSRes); %numerator of the utility function
+            utility_den = zeros(varphiSRes,thetaSRes); %denominator of the utility function
+            % [Az,El] Search
+            for i = 1:thetaSRes
+                utility_num(:,i) = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* ...
+                    B*Dh*a_range(:,:,i)).^2;
+                utility_den(:,i) = sum(abs(B*Dh*a_range(:,:,i)).^2,1) - (L)^-1 * ...
+                    abs(ones(1,L)*B*Dh*a_range(:,:,i)).^2;
+            end
+           
+             
+            utilityfunction = utility_num ./ utility_den;
+            %Extract the angle estimate
+            [~,maxind] = max(utilityfunction,[],'all');
+            [Azidx,Elidx] = ind2sub([varphiSRes,thetaSRes],maxind);
+            a = a_range(:,Azidx,Elidx);
+
+            %Estimate g
+            var_amp_g_num = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* B*Dh*a)^2;
+            var_amp_g_den = SNR_pilot * (sum(abs(B*Dh*a).^2,1) - ...
+                (L)^-1 * abs(ones(1,L)*B*Dh*a)^2)^2;
+            var_amp_g_est = var_amp_g_num/var_amp_g_den;
+            var_phas_g_est = - angle (y' * (eye(L) - (L)^-1 * ones(L,L))* B*Dh*a);
+            g_est = sqrt(var_amp_g_est) * exp(1i*var_phas_g_est) *a;
+
+            %Estimate d
+            var_amp_d_est = (SNR_pilot)^-1 * (L)^-2 * abs (ones(1,L) * (y - sqrt(SNR_pilot)*B*Dh*g_est))^2;
+            var_phas_d_est = angle (ones(1,L) * (y - sqrt(SNR_pilot)*B*Dh*g_est));
+            d_est = sqrt(var_amp_d_est) * exp(1i*var_phas_d_est);
+            
+            RISconfig = exp(-1i*(angle(Dh*g_est)-var_phas_d_est));
+
+            %Compute the corresponding achievable rate
+            rate_proposed(itr,n1,n2) = log2(1+SNR_data*abs(RISconfig.'*Dh*g + d).^2);
+     
+            %Find an extra RIS configuration to use for pilot transmission
+            if itr < Plim -1 
+
+                %Find which angles in the grid-of-beams haven't been used
+                unusedBeamresponses = widebeamresponses;
+                unusedBeamresponses(:,utilize==1) = 0;
+                %Guess what the channel would be with the different beams
+                guessBeam = unusedBeamresponses;
+
+                %Find which of the guessed channels matches best with the
+                %currently best RIS configuration
+                closestBeam = abs(RISconfig'*guessBeam); 
+                [~,bestUnusedBeamidx] = max(closestBeam);
+
+
+                %Add a pilot transmission using the new RIS configuration
+                utilize(bestUnusedBeamidx) = true;
+                RISconfigs = widebeamresponses(:,utilize);
+                B = RISconfigs.';
+
+            end
+        end
 
         if Hierarchical_Search
             for k = 1:size(W_Hierarch,3)
