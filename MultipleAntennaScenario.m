@@ -8,7 +8,7 @@ LS = true; % Least Squares Estiamtor
 proposed = false; % The proposed MLE method
 
 %UPA Element configuration
-M_H = 32; M_V = 32; M = M_H*M_V;
+M_H = 16; M_V = 16; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
 Hsize = M_H*d_H*lambda;
 Vsize = M_V*d_V*lambda;
@@ -30,20 +30,20 @@ for m = 1:M
 end
 R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 % BS config
-N = 64; d_H_BS = 1/2;
+N = 1; d_H_BS = 1/2;
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
 varphiSRes = 16*M_H;
 thetaSRes = 2*M_V;
 distSRes = 1; % Distance resolution is very important to avoid convergence
-Plim = 100; % number of pilots
+Plim = 32; % number of pilots
 
 %Set the SNR
-SNRdB_pilot = -20;
+SNRdB_pilot = -10;
 SNR_pilot = db2pow(SNRdB_pilot);
 
-SNRdB_data = -30;
+SNRdB_data = -20;
 SNR_data = db2pow(SNRdB_data);
 
 %Select angle to the base station (known value)
@@ -60,7 +60,7 @@ h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 5;
+nbrOfAngleRealizations = 200;
 nbrOfNoiseRealizations = 5;
 
 %Save the rates achieved at different iterations of the algorithm
@@ -77,7 +77,7 @@ rate_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,0);
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
 if proposed
-    load("WideTwobeam32.mat");
+    load("WideTwobeam16.mat");
     widebeamresponses = conj([beamresponses,firsttarget,secondtarget]);
 end
 
@@ -207,7 +207,7 @@ for n1 = 1:nbrOfAngleRealizations
         end
     end
 end
-%save('SingleAntennaFarField_Rician8_LowSNR_2.mat','Plim','rate_proposed','capacity','d_NMSE_proposed','g_NMSE_proposed');
+save('MultipleAntennaFarField_Rician8_with_LS.mat','Plim','rate_proposed','capacity','d_NMSE_proposed','g_NMSE_proposed','rate_LS','g_NMSE_LS','d_NMSE_LS');
 plot(2:Plim,repelem(mean(capacity),1,Plim-1),'--k','LineWidth',2);
 rate = mean(mean(rate_proposed,3),2);
 hold on;
