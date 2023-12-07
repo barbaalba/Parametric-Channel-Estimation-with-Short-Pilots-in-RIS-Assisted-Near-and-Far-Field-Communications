@@ -38,7 +38,7 @@ N = 32; d_H_BS = 1/2;
 varphiSRes = 16*M_H;
 thetaSRes = 2*M_V;
 distSRes = 1; % Distance resolution is very important to avoid convergence
-Plim = 32; % number of pilots
+Plim = 16; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = -10;
@@ -47,26 +47,8 @@ SNR_pilot = db2pow(SNRdB_pilot);
 SNRdB_data = -20;
 SNR_data = db2pow(SNRdB_data);
 
-%Select angle to the base station (known value)
-varphi_BS = -pi/6;
-theta_BS = 0;
-
-% Select the angle from the BS (Known value)
-varphi_RIS = pi/4;
-
-% Generate channel between BS and RIS
-if Rician
-    H = sqrt(K/(K+1)) * ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)' +...
-        sqrt(1/(K+1)/2)*(randn(N,M) + 1i*randn(N,M));
-else
-    H = ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)';
-end
-h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
-Dh = diag(h);
-Dh_angles = diag(h./abs(h));
-
-nbrOfAngleRealizations = 10;
-nbrOfNoiseRealizations = 10;
+nbrOfAngleRealizations = 80;
+nbrOfNoiseRealizations = 2;
 
 % DFT
 DFT = fft(eye(M));
@@ -90,6 +72,22 @@ end
 
 for n1 = 1:nbrOfAngleRealizations
     disp(n1);
+    %Select angle to the base station (known value)
+    varphi_BS = unifrnd(-pi/3,pi/3);
+    theta_BS = 0;
+    % Select the angle from the BS (Known value)
+    varphi_RIS = unifrnd(-pi/3,pi/3);
+    % Generate channel between BS and RIS
+    if Rician
+        H = sqrt(K/(K+1)) * ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)' +...
+            sqrt(1/(K+1)/2)*(randn(N,M) + 1i*randn(N,M));
+    else
+        H = ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)';
+    end
+    h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
+    Dh = diag(h);
+    Dh_angles = diag(h./abs(h));
+
     if LS
         % DFT
         perm = randperm(M);
