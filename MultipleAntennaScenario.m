@@ -4,8 +4,9 @@ clc;clear;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 K = db2pow(8); % Rician K-factor in dB
-LS = true; % Least Squares Estiamtor
-proposed = false; % The proposed MLE method
+Rician = false;
+LS = false; % Least Squares Estiamtor
+proposed = true; % The proposed MLE method
 
 %UPA Element configuration
 M_H = 16; M_V = 16; M = M_H*M_V;
@@ -30,7 +31,7 @@ for m = 1:M
 end
 R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 % BS config
-N = 1; d_H_BS = 1/2;
+N = 32; d_H_BS = 1/2;
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
@@ -54,15 +55,21 @@ theta_BS = 0;
 varphi_RIS = pi/4;
 
 % Generate channel between BS and RIS
-H = sqrt(K/(K+1)) * ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)' +...
-    sqrt(1/(K+1)/2)*(randn(N,M) + 1i*randn(N,M));
+if Rician
+    H = sqrt(K/(K+1)) * ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)' +...
+        sqrt(1/(K+1)/2)*(randn(N,M) + 1i*randn(N,M));
+else
+    H = ULA_Evaluate(N,varphi_RIS,d_H_BS) * UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H)';
+end
 h = UPA_Evaluate(lambda,M_V,M_H,varphi_BS,theta_BS,d_V,d_H); % for signle BS
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 200;
-nbrOfNoiseRealizations = 5;
+nbrOfAngleRealizations = 10;
+nbrOfNoiseRealizations = 10;
 
+% DFT
+DFT = fft(eye(M));
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
 rate_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
@@ -83,6 +90,9 @@ end
 
 for n1 = 1:nbrOfAngleRealizations
     disp(n1);
+
+    % DFT
+    perm = randperm(M);
 
     d_t = unifrnd(d_fraun,10*d_fraun);
     azimuth = unifrnd(-pi/3,pi/3,1);
@@ -178,36 +188,28 @@ for n1 = 1:nbrOfAngleRealizations
         end
 
         if LS
-            %LS estimation
-%             DFT = DFTBookBuild(M_H,M_V);
-            randomOrdering = randperm(CBL);
-            chan = zeros(M+N,1);
-            chan(1:N) = d;
-            chan(N+1:end) = g;
            
             parfor itr = 1:Plim-1
-                %B = transpose(DFT(:,randomOrdering(1:itr+1)));
-                B = transpose(Dh_angles*conj(beamresponses(:,randomOrdering(1:itr+1))));
+                B = transpose(DFT(:,perm(1:itr+1)));
                 F = kron(ones(itr+1,1),H) .* kron(B,ones(N,1));
                 
                 y =  sqrt(SNR_pilot) * ( F*g + kron(ones(itr+1,1),d) ) + noise(1:(itr+1)*N,1);
-                Fnew = zeros(N*(itr+1),M+N);
-                Fnew(:,1:N) = kron(ones(itr+1,1),eye(N));
-                Fnew(:,N+1:end) = F;
+                Fnew = [F kron(ones(itr+1,1),eye(N))];
+
                % y = sqrt(SNR_pilot)*Fnew*chan + noise(1:(itr+1)*N,1);
                 chanest = pinv(Fnew)*y/sqrt(SNR_pilot);
     
-                d_NMSE_LS(itr,n1,n2) = norm(chanest(1:N) - d)^2/norm(d)^2;
-                g_NMSE_LS(itr,n1,n2) = norm(chanest(N+1:end) - g)^2/norm(g)^2;
+                g_NMSE_LS(itr,n1,n2) = norm(chanest(1:M) - g)^2./norm(g)^2;
+                d_NMSE_LS(itr,n1,n2) = norm(chanest(M+1:end) - d)^2./norm(d)^2;
     
-                RISconfig_LS = altopt(H,chanest(N+1:end),chanest(1:N));
+                RISconfig_LS = altopt(H,chanest(1:M),chanest(M+1:end));
                 %Compute the corresponding achievable rate
                 rate_LS(itr,n1,n2) = log2(1+SNR_data*norm(H*diag(g)*RISconfig_LS + d)^2);
             end
         end
     end
 end
-save('MultipleAntennaFarField_Rician8_with_LS.mat','Plim','rate_proposed','capacity','d_NMSE_proposed','g_NMSE_proposed','rate_LS','g_NMSE_LS','d_NMSE_LS');
+%save('MultipleAntennaFarField_Rician8_with_LS.mat','Plim','rate_proposed','capacity','d_NMSE_proposed','g_NMSE_proposed','rate_LS','g_NMSE_LS','d_NMSE_LS');
 plot(2:Plim,repelem(mean(capacity),1,Plim-1),'--k','LineWidth',2);
 rate = mean(mean(rate_proposed,3),2);
 hold on;
