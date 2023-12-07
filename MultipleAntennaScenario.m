@@ -90,9 +90,10 @@ end
 
 for n1 = 1:nbrOfAngleRealizations
     disp(n1);
-
-    % DFT
-    perm = randperm(M);
+    if LS
+        % DFT
+        perm = randperm(M);
+    end
 
     d_t = unifrnd(d_fraun,10*d_fraun);
     azimuth = unifrnd(-pi/3,pi/3,1);
@@ -117,12 +118,17 @@ for n1 = 1:nbrOfAngleRealizations
             end
         end
     end
-    g = sqrt(K/(K+1)) * nearFieldChan(d_t,azimuth,elevation,U,lambda) + ...
-            sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
-    var_amp_d= 64;
-    d = sqrt(var_amp_d) * (sqrt(K/(K+1)) * ULA_Evaluate(N,unifrnd(-pi/3,pi/3,1),d_H_BS) + ...
-        sqrt(1/2/(K+1))*(randn(N,1) + 1i*randn(N,1)));
-    %d = sqrt(var_amp_d) * (randn(N,1) + 1i*randn(N,1));
+    if Rician
+        g = sqrt(K/(K+1)) * nearFieldChan(d_t,azimuth,elevation,U,lambda) + ...
+                sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
+        var_amp_d= 64;
+        d = sqrt(var_amp_d) * (sqrt(K/(K+1)) * ULA_Evaluate(N,unifrnd(-pi/3,pi/3,1),d_H_BS) + ...
+            sqrt(1/2/(K+1))*(randn(N,1) + 1i*randn(N,1)));
+    else
+        g = nearFieldChan(d_t,azimuth,elevation,U,lambda);
+        var_amp_d= 64;
+        d = sqrt(var_amp_d/2) * (randn(N,1) + 1i*randn(N,1));
+    end
 
     optRIS = altopt(H,g,d);
     %Compute the exact capacity for the system Eq. (3)
@@ -170,7 +176,7 @@ for n1 = 1:nbrOfAngleRealizations
                     unusedBeamresponses = widebeamresponses;
                     unusedBeamresponses(:,utilize==1) = 0;
                     %Guess what the channel would be with the different beams
-                    guessBeam = Dh*unusedBeamresponses;
+                    guessBeam = Dh_angles*unusedBeamresponses;
 
                     %Find which of the guessed channels matches best with the
                     %currently best RIS configuration
