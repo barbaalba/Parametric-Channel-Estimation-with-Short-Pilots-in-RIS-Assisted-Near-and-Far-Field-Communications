@@ -1,14 +1,15 @@
-function [d_est,var_phas_d_est,var_amp_g_est,var_phas_g_est,g_est,Azidx,Elidx] = MLE(y,L,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot)
+function [d_est,var_phas_d_est,var_amp_g_est,var_phas_g_est,g_est,Azidx,Elidx] = MLE(y,L,B,Dh,a_range,SNR_pilot)
 % Input:
 %   - y: rx signal
 %   - L: number of pilots
 %   - 
-SRes = size(a_range,3);
+ElRes = size(a_range,3);
+AzRes = size(a_range,2);
 %Compute the ML utility function for all potential angle pairs
-utility_num = zeros(SRes,SRes); %numerator of the utility function
-utility_den = zeros(SRes,SRes); %denominator of the utility function
+utility_num = zeros(AzRes,ElRes); %numerator of the utility function
+utility_den = zeros(AzRes,ElRes); %denominator of the utility function
 % [Az,El] Search
-for i = 1:SRes
+for i = 1:ElRes
     utility_num(:,i) = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* ...
         B*Dh*a_range(:,:,i)).^2;
     utility_den(:,i) = sum(abs(B*Dh*a_range(:,:,i)).^2,1) - (L)^-1 * ...
@@ -20,7 +21,7 @@ utilityfunction = utility_num ./ utility_den;
 
 %Extract the angle estimate
 [~,maxind] = max(utilityfunction,[],'all');
-[Azidx,Elidx] = ind2sub([SRes,SRes],maxind);
+[Azidx,Elidx] = ind2sub([AzRes,ElRes],maxind);
 a = a_range(:,Azidx,Elidx);
 
 %Estimate g
