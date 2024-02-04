@@ -24,7 +24,7 @@ for m = 1:M
     U(:,m) = [0; ym; zm]; % Relative position of the m-th element with respect to the center
 end
 % define the plane 
-x_t = linspace(0,d_fraun/5,2000); % cover different distances
+x_t = linspace(0,d_fraun,2000); % cover different distances
 z_t = repelem(0,1,length(x_t)); % Elevation angle of zero
 y_t = linspace(-d_fraun/2,d_fraun/2,length(x_t)); % cover different azimuth
 az = [0,pi/6,-pi/6]; % Which azimuth to consider for beamforming
@@ -32,7 +32,7 @@ pow = zeros(length(y_t),length(x_t),length(az));
 
 for j = 1:length(az)
     % Near-field array response
-    nearChan1 = nearFieldChan(2*d_fraun,az(j),0,U,lambda); 
+    nearChan1 = nearFieldChan(d_NF/2,az(j),0,U,lambda); 
     % Vector response on the plane parallel to X-Y plane 
     parfor i = 1:length(x_t)
         [azimuth,elevation,Cph,d_t] = ChanParGen(repelem(x_t(i),1,length(y_t)),y_t,z_t,Ant_Center,lambda);
