@@ -37,8 +37,8 @@ N = 32; d_H_BS = 1/2;
 % search resolution (It is very important)
 varphiSRes = 16*M_H;
 thetaSRes = 2*M_V;
-distSRes = 1; % Distance resolution is very important to avoid convergence
-Plim = 16; % number of pilots
+distSRes = M_H; % Distance resolution is very important to avoid convergence
+Plim = 20; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = -10;
@@ -93,7 +93,7 @@ for n1 = 1:nbrOfAngleRealizations
         perm = randperm(M);
     end
 
-    d_t = unifrnd(d_fraun,10*d_fraun);
+    d_t = unifrnd(d_bjo,d_NF);
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,pi/3,1);
     if proposed
@@ -104,7 +104,7 @@ for n1 = 1:nbrOfAngleRealizations
         dist_range = zeros(1,distSRes);
         mind = max([d_bjo,d_t-d_bjo/8]);
         maxd = min([10*d_fraun,d_t+d_fraun/8]);
-        dist_range(:) = d_t;%linspace(mind,maxd,distSRes);
+        dist_range(:) = linspace(mind,maxd,distSRes);
         % obtain the array response vectors for all azimuth-elevation-distance
         % triplet using the exact expression
         a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
