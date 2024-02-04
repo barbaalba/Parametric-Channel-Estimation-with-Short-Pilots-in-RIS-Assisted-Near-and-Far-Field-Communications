@@ -48,13 +48,13 @@ varphiSRes = M_H;
 thetaSRes = M_H/2;
 distSRes = M_H; % Distance resolution is very important to avoid convergence
 Plim = 10; % number of pilots
-ptrack = 4; % number of tracking pilots
+ptrack = 6; % number of tracking pilots
 
 %Set the SNR
-SNRdB_pilot = 0;
+SNRdB_pilot = -10;
 SNR_pilot = db2pow(SNRdB_pilot);
 
-SNRdB_data = -10;
+SNRdB_data = -20;
 SNR_data = db2pow(SNRdB_data);
 
 %Select angle to the base station (known value)
