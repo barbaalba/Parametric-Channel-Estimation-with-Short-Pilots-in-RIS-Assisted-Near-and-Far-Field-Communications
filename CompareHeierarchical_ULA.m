@@ -3,25 +3,24 @@ clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
-K = db2pow(12); % Rician K-factor in dB
 Hierarchical_Search = true;
 %ULA RIS configuration
 M = 256;
 d_H = 1/2; % in wavelnegth
 
 if Hierarchical_Search
-    W_Hierarch = ULA_Hierarchical(lambda,M,d_H);
+    W_Hierarch = ULA_Hierarchical(M,d_H);
 end
 %% Channel Estimation Parameters
 % search resolution (It is very important)
-varphiSRes = 4*M;
+varphiSRes = 16*M;
 Plim = 2*log2(M); % number of pilots limited by Hierachical search
 
 % Define a fine grid of angle directions and distance to be used in
 % estimator
 varphi_range = linspace(-pi/3,pi/3,varphiSRes);
 % obtain the array response vectors for all azimuth
-a_range = ULA_Evaluate(lambda,M,varphi_range,d_H);
+a_range = ULA_Evaluate(M,varphi_range,d_H);
 
 %Set the SNR
 SNRdB_pilot = 0;
@@ -34,12 +33,12 @@ SNR_data = db2pow(SNRdB_data);
 varphi_BS = -pi/6;
 
 % Generate channel between BS and RIS
-h = ULA_Evaluate(lambda,M,varphi_BS,d_H);
+h = ULA_Evaluate(M,varphi_BS,d_H);
 Dh = diag(h);
 Dh_angles = diag(h./abs(h));
 
-nbrOfAngleRealizations = 500;
-nbrOfNoiseRealizations = 10;
+nbrOfAngleRealizations = 50;
+nbrOfNoiseRealizations = 5;
 
 %Save the rates achieved at different iterations of the algorithm
 capacity = zeros(1,nbrOfAngleRealizations);
@@ -50,8 +49,6 @@ SNR = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 
 % Generate code book
 CBL = M;
-beamresponses = fft(eye(M));
-load('widebeamULA256.mat');
 beamresponses = [W_Hierarch(:,:,log2(M)) W_Hierarch(:,1,1) W_Hierarch(:,2,1)];
 
 for n1 = 1:nbrOfAngleRealizations
@@ -59,9 +56,7 @@ for n1 = 1:nbrOfAngleRealizations
 
     azimuth = unifrnd(-pi/3,pi/3,1);
 
-%     g = sqrt(K/(K+1)) * ULA_Evaluate(lambda,M,azimuth,d_H) + ...
-%             sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
-    g = ULA_Evaluate(lambda,M,azimuth,d_H);
+    g = ULA_Evaluate(M,azimuth,d_H);
             
     var_amp_d= 64;
     d = sqrt(var_amp_d/2) * (randn + 1i*randn);
