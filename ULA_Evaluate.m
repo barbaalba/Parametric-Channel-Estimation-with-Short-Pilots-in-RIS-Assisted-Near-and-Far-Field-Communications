@@ -1,4 +1,4 @@
-function ULA_response = ULA_Evaluate(lambda,N,Azimuth,spacing)
+function ULA_response = ULA_Evaluate(N,Azimuth,spacing)
 % To evaluate normalized antenna vector for Uniform Linear Array 
 % Inputs: 
 %   lambda: Wavelength
@@ -8,12 +8,12 @@ function ULA_response = ULA_Evaluate(lambda,N,Azimuth,spacing)
 % Output:
 %   ULA_response: Antenna response
 
-d = lambda*spacing; % antenna spacing 
+d = spacing; % antenna spacing 
 
 ULA_response = zeros(N,length(Azimuth));
 
 for n = 1:length(Azimuth)
 
-    ULA_response(:,n) = exp(-1i*2*pi*d/lambda*sin(Azimuth(n))*(0:N-1)');
+    ULA_response(:,n) = exp(-1i*2*pi*d*sin(Azimuth(n))*(0:N-1)');
 
 end
