@@ -28,7 +28,7 @@ for m = 1:M
 end
 
 if Hierarchical_Search
-    W_Hierarch = UPA_Hierarchical(lambda,M_H,M_V,d_H,d_V);
+    W_Hierarch = UPA_Hierarchical(M_H,M_V,d_H,d_V);
 end
 %% Channel Estimation Parameters
 % search resolution (It is very important)
@@ -115,7 +115,7 @@ for n1 = 1:nbrOfAngleRealizations
             utility_num = zeros(varphiSRes,thetaSRes); %numerator of the utility function
             utility_den = zeros(varphiSRes,thetaSRes); %denominator of the utility function
             % [Az,El] Search
-            for i = 1:thetaSRes
+            parfor i = 1:thetaSRes
                 utility_num(:,i) = abs(y' * (eye(L) - (L)^-1 * ones(L,L))* ...
                     B*Dh*a_range(:,:,i)).^2;
                 utility_den(:,i) = sum(abs(B*Dh*a_range(:,:,i)).^2,1) - (L)^-1 * ...
@@ -212,3 +212,4 @@ ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to
                                   % axis
 fig = gcf;
 set(fig,'position',[60 50 900 600]);
+%save('HierarchicalUPA.mat','rate_proposed','capacity','rate_Hierchical','Plim')
