@@ -11,7 +11,7 @@
 - nearFieldChan.m: The function that generate realistic channel based on the propagation distance between user and RIS elements. 
 - UPA_BasisElupnew.m: It find all the angle pairs that results in orthogonal beams.
 - UPA_Codebook.m: Generate array responses of the orthogonal angle pairs.
-- ChanParGen.m:
+- ChanParGen.m: generate the channel phase array considering the location of the user and the RIS/BS.
 - MultipleAntennaScenario.m: Generate Figures 13 and 14.
 - CompareHeierarchical.m and CompareHeierarchical_withoutDirect.m: Generate the Figure 15.
   
