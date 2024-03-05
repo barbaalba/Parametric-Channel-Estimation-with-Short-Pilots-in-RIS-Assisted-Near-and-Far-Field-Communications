@@ -1,5 +1,8 @@
 # Parametric Channel Estimation with Short Pilots in RIS-Assisted Near-and Far-Field Communications
+The code corresponds to the following paper, accepted for publication in IEEE Transactions on Wireless Communications. 
 
+arXiv (Open Access)
+- [as](https://doi.org/10.48550/arXiv.2308.10668)
 # Improtant Functions
 - widebeam.m: To generate Figures 6 and 7 in the paper.
 - wideAlgTest.m: To generate Figures 8 and 9.
