@@ -1,4 +1,4 @@
-function [d_est,g_est] = MLE4D(y,L,F,a_range,SNR_pilot)
+function [d_est,g_est,loc_polar] = MLE4D(y,L,F,a_range,SNR_pilot)
 M = length(y)/L; % BS antenna
 
 thetaSRes = size(a_range,3);
@@ -23,6 +23,7 @@ utilityfunction = utility_num ./ utility_den; %[Az,El,dist]
 [~,maxind] = max(utilityfunction,[],'all');
 [Azidx,Elidx,didx] = ind2sub([varphiSRes,thetaSRes,distSRes],maxind);
 a = a_range(:,Azidx,Elidx,didx);
+loc_polar = [Azidx;Elidx;didx];
 
 %Estimate g
 var_amp_g_num = abs(y' * ( eye(M*L) - ( kron(ones(L,L),eye(M)) ) /L ) * F * a);
