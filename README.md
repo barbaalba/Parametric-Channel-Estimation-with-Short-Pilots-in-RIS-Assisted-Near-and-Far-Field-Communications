@@ -13,7 +13,7 @@
 - AlgTestOptimized.m: To generate Figures 10 and 11. It needs  to be configured to correspond to either far-field or near-field scenarios.
 - randomwalkRun.m: To generate Figure 12.
 - AlgTest.m: The main code to test the efficiency and effectiveness of the generic channel estimation algorithm. It generates the figures [] and []
-- AzElGraph.m: It plots set of angles that leads to orthogonal beams. Figure [] in the paper. 
+- AzElGraph.m: It plots set of angles that leads to orthogonal beams. Figure 3 in the paper. 
 - BestCodeBook.m: It plots 3D figure where we understand what is the best initialization angle to generate the code book. Figure [] in the paper.
 - MLE.m: It is the function that estimate the channel by assuming that it is approximately far-field. 
 - MLE3D.m: It estimate the channel by estimating distance and azimuth-elevation pairs. It is work the best for both near field and far-field region.
