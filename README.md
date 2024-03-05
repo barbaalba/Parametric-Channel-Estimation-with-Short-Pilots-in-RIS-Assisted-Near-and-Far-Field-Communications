@@ -1,9 +1,4 @@
-# NearField_RIS
-
-# Tutorial Functions
-- phaseOverAntennas.m: It demonstrate how near field project phase over the array surface compared to far field. 
-- stretchedBeam.m: It plots the orthogonal crosses to show that increasing elevation leads to points going out of the border.
-- Tightness.m: To understand far-field and first order approximation of the channel. 
+# Parametric Channel Estimation with Short Pilots in RIS-Assisted Near-and Far-Field Communications
 
 # Improtant Functions
 - widebeam.m: To generate Figures 6 and 7 in the paper.
