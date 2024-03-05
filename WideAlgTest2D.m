@@ -1,5 +1,5 @@
 % This code is to test the functionality of the implemented algorithm to
-% estimate the channel by using widebeams
+% estimate the channel by using widebeams (Far-field channel)
 clc;clear;close all;
 %% Env Initialization
 freq = 28e9; % Central frequency
@@ -65,7 +65,7 @@ parfor i = 1:length(theta_range) % for each elevation
     a_range(:,:,i) = ...
         UPA_Evaluate(lambda,M_V,M_H,varphi_range,repelem(theta_range(i),1,varphiSRes),d_V,d_H);
 end
-load('widebeam16.mat');
+load('wideTwobeam16.mat');
 widebeamresponses = [beamresponses,firsttarget,secondtarget];
 %% Start the simulation
 for n1 = 1:nbrOfAngleRealizations
@@ -104,7 +104,7 @@ for n1 = 1:nbrOfAngleRealizations
             y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
  
             % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+            [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_range,SNR_pilot);
 
             %Estimate the RIS configuration that (approximately) maximizes the SNR
             RISconfig = angle(Dh*g_est)-var_phas_d_est;
@@ -148,7 +148,7 @@ for n1 = 1:nbrOfAngleRealizations
             y =  sqrt(SNR_pilot)*(B*Dh*g + d) + noise(1:itr+1,1);
             
             % Estimate the Channel using the developed MLE
-            [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_range,lambda,M_V,M_H,d_V,d_H,varphi_range,theta_range,SNR_pilot);
+            [~,var_phas_d_est,~,~,g_est,~,~] = MLE(y,itr+1,B,Dh,a_range,SNR_pilot);
     
             %Estimate the RIS configuration that (approximately) maximizes the SNR
             RISconfig = angle(Dh*g_est)-var_phas_d_est;
@@ -199,5 +199,3 @@ plot(pow2db(SNR_total_new),'LineWidth',2);
 hold on;
 plot(pow2db(SNR_w_total_new),'LineWidth',2);
 legend('Narrowbeam','Widebeam');
-
-save('draft2.mat','rate_proposed','rate_wide','SNR_total','SNR_w_total','capacity','Plim');
