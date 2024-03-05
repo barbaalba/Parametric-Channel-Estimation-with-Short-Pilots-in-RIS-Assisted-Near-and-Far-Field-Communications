@@ -9,7 +9,7 @@ LS = false; % Least Squares Estiamtor
 proposed = true; % The proposed MLE method
 
 %UPA Element configuration
-M_H = 16; M_V = 16; M = M_H*M_V;
+M_H = 32; M_V = 32; M = M_H*M_V;
 d_H = 1/2; d_V = 1/2; %In wavelengths
 Hsize = M_H*d_H*lambda;
 Vsize = M_V*d_V*lambda;
@@ -31,14 +31,14 @@ for m = 1:M
 end
 R = UPAcorrelation(M_H,M_V,d_H,d_V,lambda); % correlation matrix
 % BS config
-N = 32; d_H_BS = 1/2;
+N = 1; d_H_BS = 1/2;
 
 %% Channel Estimation Parameters
 % search resolution (It is very important)
-varphiSRes = 16*M_H;
-thetaSRes = 2*M_V;
-distSRes = M_H; % Distance resolution is very important to avoid convergence
-Plim = 20; % number of pilots
+varphiSRes = 90;
+thetaSRes = 90;
+distSRes = 90; % Distance resolution is very important to avoid convergence
+Plim = 16; % number of pilots
 
 %Set the SNR
 SNRdB_pilot = -10;
@@ -47,7 +47,7 @@ SNR_pilot = db2pow(SNRdB_pilot);
 SNRdB_data = -20;
 SNR_data = db2pow(SNRdB_data);
 
-nbrOfAngleRealizations = 80;
+nbrOfAngleRealizations = 100;
 nbrOfNoiseRealizations = 2;
 
 % DFT
@@ -60,14 +60,38 @@ g_NMSE_proposed = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 d_NMSE_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 g_NMSE_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 rate_LS = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+loc_err = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+dist_err = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+az_err = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
+el_err = zeros(Plim,nbrOfAngleRealizations,nbrOfNoiseRealizations);
 %% Iniitilize channel estimation 
 
 % Generate code book
 [ElAngles,AzAngles,CBL] = UPA_BasisElupnew(M_V,M_H,d_V,d_H,pi/2,0);
 beamresponses = UPA_Codebook(lambda,ElAngles,AzAngles,M_V,M_H,d_V,d_H);
 if proposed
-    load("WideTwobeam16.mat");
+    load("WideTwobeam32.mat");
     widebeamresponses = conj([beamresponses,firsttarget,secondtarget]);
+end
+
+if proposed
+    % Define a fine grid of angle directions and distance to be used in
+    % estimator
+    varphi_range = linspace(-pi/3,pi/3,varphiSRes);
+    theta_range = linspace(-pi/3,pi/3,thetaSRes);
+    dist_range = zeros(1,distSRes);
+    dist_range(:) = linspace(d_bjo,d_NF,distSRes);
+    % obtain the array response vectors for all azimuth-elevation-distance
+    % triplet using the exact expression
+    a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
+    for l =1:length(varphi_range) % for each distance
+        az_red = repelem(varphi_range(l),1,distSRes);
+        parfor i = 1:length(theta_range) % for each elevation
+            el_red = repelem(theta_range(i),1,distSRes)
+            a_range(:,l,i,:) = ...
+                nearFieldChan(dist_range,az_red,el_red,U,lambda);
+        end
+    end
 end
 
 for n1 = 1:nbrOfAngleRealizations
@@ -96,26 +120,8 @@ for n1 = 1:nbrOfAngleRealizations
     d_t = unifrnd(d_bjo,d_NF);
     azimuth = unifrnd(-pi/3,pi/3,1);
     elevation = unifrnd(-pi/3,pi/3,1);
-    if proposed
-        % Define a fine grid of angle directions and distance to be used in
-        % estimator
-        varphi_range = linspace(azimuth-pi/6,azimuth+pi/6,varphiSRes);
-        theta_range = linspace(elevation-pi/24,elevation+pi/24,thetaSRes);
-        dist_range = zeros(1,distSRes);
-        mind = max([d_bjo,d_t-d_bjo/8]);
-        maxd = min([10*d_fraun,d_t+d_fraun/8]);
-        dist_range(:) = linspace(mind,maxd,distSRes);
-        % obtain the array response vectors for all azimuth-elevation-distance
-        % triplet using the exact expression
-        a_range = zeros(M,varphiSRes,thetaSRes,distSRes); % [M,Azimuth,Elevation,distance]
-        for l =1:length(dist_range) % for each distance
-            d_red = repelem(dist_range(l),1,varphiSRes);
-            parfor i = 1:length(theta_range) % for each elevation
-                a_range(:,:,i,l) = ...
-                    nearFieldChan(d_red,varphi_range,repelem(theta_range(i),1,varphiSRes),U,lambda);
-            end
-        end
-    end
+    loc_uc = [d_t*cos(elevation)*cos(azimuth); d_t*cos(elevation)*sin(azimuth); d_t*sin(elevation)];
+
     if Rician
         g = sqrt(K/(K+1)) * nearFieldChan(d_t,azimuth,elevation,U,lambda) + ...
                 sqrtm(R)* sqrt(1/(K+1)/2)*(randn(M,1) + 1i*randn(M,1));
@@ -129,7 +135,7 @@ for n1 = 1:nbrOfAngleRealizations
     end
 
     optRIS = altopt(H,g,d);
-    %Compute the exact capacity for the system Eq. (3)
+    %Compute the exact capacity for the system 
     capacity(n1) = log2(1+SNR_data*norm(H*diag(g)*optRIS + d)^2);
 
     for n2 = 1:nbrOfNoiseRealizations
@@ -139,11 +145,6 @@ for n1 = 1:nbrOfAngleRealizations
         if proposed
             utilize = false(CBL+2,1);
             utilize(end-1:end) = true;
-%             idx = randi(CBL,2,1);
-%             while idx(2) == idx(1)
-%                 idx(2) = randi(CBL,1);
-%             end
-%             utilize(idx) = true;
     
             RISconfigs = Dh_angles*widebeamresponses(:,utilize);
             B = RISconfigs.';   
@@ -155,11 +156,21 @@ for n1 = 1:nbrOfAngleRealizations
                 y =  sqrt(SNR_pilot) * ( F*g + kron(ones(itr+1,1),d) ) + noise(1:(itr+1)*N,1);
                 
                 % Estimate the Channel using the developed MLE
-                [d_est,g_est]  = MLE4D(y,itr+1,F,a_range,SNR_pilot);
-            
+                [d_est,g_est,loc_p]  = MLE4D(y,itr+1,F,a_range,SNR_pilot);
+                % Estiamte the location of the user in 3D
+                x_uc_est = dist_range(loc_p(3)) * cos(theta_range(loc_p(2))) * cos(varphi_range(loc_p(1)));
+                y_uc_est = dist_range(loc_p(3)) * cos(theta_range(loc_p(2))) * sin(varphi_range(loc_p(1)));
+                z_uc_est = dist_range(loc_p(3)) * sin(theta_range(loc_p(2)));
+                loc_uc_est = [x_uc_est;y_uc_est;z_uc_est];
+                dist_err(itr,n1,n2) = abs(dist_range(loc_p(3)) - d_t);
+                az_err(itr,n1,n2) = abs(varphi_range(loc_p(1)) - azimuth);
+                el_err(itr,n1,n2) = abs(theta_range(loc_p(2)) - elevation);
+                loc_err(itr,n1,n2) = sqrt(sum((loc_uc-loc_uc_est).^2));
+
                 % Estimation performance
                 d_NMSE_proposed(itr,n1,n2) = norm(d_est - d)^2 / norm(d)^2;
                 g_NMSE_proposed(itr,n1,n2) = norm(g_est - g)^2 / norm(g)^2;
+                
     
                 %Estimate the RIS configuration that (approximately) maximizes the SNR
                 RISconfig = altopt(H,g_est,d_est);
@@ -251,6 +262,45 @@ xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
 fig = gcf;
 fig.Children.FontSize = 20;
 legend('Direct channel $\mathbf{d}$','Channel to the RIS $\mathbf{g}$','Direct channel $\mathbf{d}$ - LS','Channel to the RIS $\mathbf{g}$ - LS','Fontsize',20,'interpreter','latex');
+grid on;
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+
+figure;
+az_err = mean(mean(az_err,3),2);
+el_err = mean(mean(el_err,3),2);
+plot(2:Plim,az_err(1:end-1),'LineWidth',2);
+hold on;
+plot(2:Plim,el_err(1:end-1),'LineWidth',2);
+xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
+ylabel('Error [rad]','FontSize',20,'Interpreter','latex');
+legend('Azimth','Elevation','Fontsize',20,'interpreter','latex');
+grid on;
+ax = gca; % to get the axis handle
+ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
+ax.Position = [0.15 0.15 0.8 0.8]; % Set the position of inner axis with respect to
+                           % the figure border
+ax.XLabel.Position = [0.5 -0.07]; % position of the label with respect to 
+                                  % axis
+fig = gcf;
+set(fig,'position',[60 50 900 600]);
+
+figure;
+dist_err = mean(mean(dist_err,3),2);
+loc_err = mean(mean(loc_err,3),2);
+
+plot(2:Plim,dist_err(1:end-1),'LineWidth',2);
+hold on;
+plot(2:Plim,loc_err(1:end-1),'LineWidth',2);
+xlabel('Number of pilots','FontSize',20,'Interpreter','latex');
+ylabel('Error [m]','FontSize',20,'Interpreter','latex');
+legend('Distance','USer Location','Fontsize',20,'interpreter','latex');
 grid on;
 ax = gca; % to get the axis handle
 ax.XLabel.Units = 'normalized'; % Normalized unit instead of 'Data' unit 
