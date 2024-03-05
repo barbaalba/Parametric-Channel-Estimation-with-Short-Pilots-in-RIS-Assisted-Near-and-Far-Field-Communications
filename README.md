@@ -1,7 +1,6 @@
 # NearField_RIS
 
 # Tutorial Functions
-- antennacorr.m: It is to understand how two distance on the same angle point lose their correlation. 
 - BeamWidth.m: It plots a figure where we understand that moving toward edges the beam gets wider and stretched in near field region. 
 - EigenDecompositionNearField.m: It plots the Eigenvalues in order.
 - phaseOverAntennas.m: It demonstrate how near field project phase over the array surface compared to far field. 
