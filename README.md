@@ -11,7 +11,6 @@
 - wideAlgTest.m: To generate Figures 8 and 9.
 - AlgTestOptimized.m: To generate Figures 10 and 11. It needs  to be configured to correspond to either far-field or near-field scenarios.
 - randomwalkRun.m: To generate Figure 12.
-- AlgTest.m: The main code to test the efficiency and effectiveness of the generic channel estimation algorithm. It generates the figures [] and []
 - AzElGraph.m: It plots set of angles that leads to orthogonal beams. Figure 3 in the paper. 
 - BestCodeBook.m: It plots 3D figure where we understand what is the best initialization angle to generate the code book. Figure [] in the paper.
 - MLE.m: It is the function that estimate the channel by assuming that it is approximately far-field. 
@@ -20,7 +19,8 @@
 - UPA_BasisElupnew.m: It find all the angle pairs that results in orthogonal beams.
 - UPA_Codebook.m: Generate array responses of the orthogonal angle pairs.
 - ChanParGen.m: 
-- distanceCorr.m: 
+- distanceCorr.m:
+- CompareHeierarchical.m and CompareHeierarchical_withoutDirect.m: Generate the Figure 15.
   
 # Random Walk functions
 - plotTrajectory.m: plot the trajectory of the random walk in the room 
