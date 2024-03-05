@@ -18,6 +18,3 @@
 # Random Walk functions
 - plotTrajectory.m: plot the trajectory of the random walk in the room 
 - randomwalk.m: It generate a random walk scenario in a confined room with given size 
-- realChanGen.m: 
-- Run.m: 
- 
