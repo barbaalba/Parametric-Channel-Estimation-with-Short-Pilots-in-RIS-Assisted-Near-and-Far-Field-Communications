@@ -4,8 +4,8 @@ clc;clear;close all;
 freq = 28e9; % Central frequency
 lambda = physconst('LightSpeed') / freq; % Wavelength
 NFConf = false; % True or false to specify which case to simulate (Near field or far field)
-wideBF = false; % To start the algorithm with random choice or wide beams
-dynamic = false; % Dynamic reconfiguration of the RIS 
+wideBF = true; % To start the algorithm with random choice or wide beams
+dynamic = true; % Dynamic reconfiguration of the RIS 
 
 %UPA Element configuration
 M_H = 32; M_V = 32; M = M_H*M_V;
