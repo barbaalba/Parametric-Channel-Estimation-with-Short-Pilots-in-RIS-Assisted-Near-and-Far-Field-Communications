@@ -1,7 +1,6 @@
 # NearField_RIS
 
 # Tutorial Functions
-- BeamWidth.m: It plots a figure where we understand that moving toward edges the beam gets wider and stretched in near field region. 
 - EigenDecompositionNearField.m: It plots the Eigenvalues in order.
 - phaseOverAntennas.m: It demonstrate how near field project phase over the array surface compared to far field. 
 - stretchedBeam.m: It plots the orthogonal crosses to show that increasing elevation leads to points going out of the border.
