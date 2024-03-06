@@ -3,7 +3,7 @@ The code corresponds to the following paper, accepted for publication in IEEE Tr
 
 arXiv (Open Access)
 - [Haghshenas, Mehdi, et al. "Parametric Channel Estimation with Short Pilots in RIS-Assisted Near-and Far-Field Communications." arXiv preprint arXiv:2308.10668 (2023).](https://doi.org/10.48550/arXiv.2308.10668)
-# Improtant Functions
+# Main Functions
 - widebeam.m: To generate Figures 6 and 7 in the paper.
 - wideAlgTest.m: To generate Figures 8 and 9.
 - AlgTestOptimized.m: To generate Figures 10 and 11. It needs  to be configured to correspond to either far-field or near-field scenarios.
